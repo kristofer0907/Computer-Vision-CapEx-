@@ -1,0 +1,21 @@
+# Base dependencies - install these on any machine, Pi or laptop.
+# Nothing here is Raspberry Pi specific, so `python main.py` runs everywhere
+# and falls back to the simulated backends when no hardware is present.
+numpy>=1.24
+opencv-python>=4.8      # on the Pi prefer: sudo apt install python3-opencv
+flask>=3.0
+
+# ---------------------------------------------------------------------------
+# Raspberry Pi only. Do NOT put these in the list above and do NOT pip install
+# them - they are system packages tied to the Pi camera and I2C stacks:
+#
+#   sudo apt install python3-libcamera python3-picamera2
+#   pip install adafruit-circuitpython-mlx90640 adafruit-blinka
+#
+# The venv must be created with --system-site-packages for picamera2 to be
+# importable inside it:
+#   python3 -m venv --system-site-packages ~/venvs/vision
+#
+# Optional, only if the YOLO localisation route is chosen:
+#   pip install ultralytics
+# ---------------------------------------------------------------------------
