@@ -119,6 +119,7 @@ class MockCameraSource(CameraSource):
         t_begin = time.monotonic()
         sim_t = self.sim_time
         img = self.scene.render(sim_t)
+        truth = self.scene.truth_at(sim_t)
         # Real capture latency, on purpose: an instant mock hides the queue
         # backpressure bugs that only surface against hardware.
         sleep_remaining(t_begin, self.latency_s)
@@ -126,7 +127,8 @@ class MockCameraSource(CameraSource):
         # advances at time_scale, so wall-clock stamps would tell the tracker
         # that vials teleport - and any dt-dependent logic (the association
         # gate, dwell times, stall thresholds) would be tested against a lie.
-        return Frame(img, self._wall_t0 + sim_t, self._next_id(), self.name, True)
+        return Frame(img, self._wall_t0 + sim_t, self._next_id(), self.name,
+                     True, truth)
 
     def stop(self) -> None:
         self._started = False
@@ -170,12 +172,22 @@ class FileCameraSource(CameraSource):
             raise RuntimeError("capture() before start()")
         t_begin = time.monotonic()
 
+        # Which file this frame came from, carried on Frame.truth. It is the
+        # only way anything downstream can tell one still from another, and
+        # ManualLocalizer keys its hand-marked vial positions off it.
+        origin: dict[str, object] = {}
+
         if self._stills:
             if self._idx >= len(self._stills):
                 if not self.loop:
                     raise StopIteration("end of stills")
                 self._idx = 0
-            img = cv2.imread(str(self._stills[self._idx]))
+            still = self._stills[self._idx]
+            img = cv2.imread(str(still))
+            if img is None:
+                raise HardwareUnavailable(f"could not decode {still}")
+            origin = {"name": still.name, "path": str(still),
+                      "index": self._idx}
             self._idx += 1
         else:
             ok, img = self._cap.read()
@@ -186,9 +198,11 @@ class FileCameraSource(CameraSource):
                 ok, img = self._cap.read()
                 if not ok:
                     raise HardwareUnavailable("replay source produced no frames")
+            origin = {"name": self.path.name, "path": str(self.path),
+                      "index": int(self._cap.get(cv2.CAP_PROP_POS_FRAMES))}
 
         sleep_remaining(t_begin, self.latency_s)
-        return Frame(img, time.time(), self._next_id(), self.name, True)
+        return Frame(img, time.time(), self._next_id(), self.name, True, origin)
 
     def stop(self) -> None:
         if self._cap is not None:

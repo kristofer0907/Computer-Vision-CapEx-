@@ -34,6 +34,10 @@ class Frame:
     frame_id: int             # monotonic per source
     source: str               # backend name, e.g. "picamera2" / "mock"
     simulated: bool = False
+    # Ground truth, populated by simulated backends only. A real camera leaves
+    # this None and nothing in the pipeline may require it - it exists so the
+    # plumbing can be exercised end to end before a localiser is written.
+    truth: dict[str, Any] | None = None
 
     @property
     def shape(self) -> tuple[int, int]:

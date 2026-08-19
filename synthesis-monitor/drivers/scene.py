@@ -30,6 +30,13 @@ STAGE_DWELL_S: dict[str, float] = {
 DEPARTURE_PACE_S = 35.0   # one vial leaves the filling rack every 35 sim-seconds
 TRAVEL_FRACTION = 0.4
 
+# The scene renders whatever zones config actually has, which after
+# tools/edit_zones may be a different set from the placeholders above.
+# It must degrade rather than crash: a simulator that only runs against its
+# own hard-coded zone names stops being usable the moment the real ones are
+# traced, which is exactly when it is still needed for regression testing.
+FALLBACK_STAGE = "filling"
+
 
 def _poly_center(poly) -> tuple[float, float]:
     xs = [p[0] for p in poly]
@@ -62,20 +69,39 @@ class SyntheticPlatform:
         # Fixed per-vial cosmetic jitter so vials are not clones.
         self._hue_jitter = self._rng.uniform(-3.0, 3.0, self.n_vials)
         self._sat_jitter = self._rng.uniform(-12.0, 12.0, self.n_vials)
-        self._fill_slots = self._build_fill_slots()
         self._zone_centers = {k: _poly_center(v) for k, v in ZONES.polygons.items()}
+        # Only the stages that actually have a polygon to move to. A traced
+        # calibration may name its zones differently or omit one.
+        self._dwells = {k: v for k, v in STAGE_DWELL_S.items()
+                        if k in self._zone_centers}
+        self._fill_zone = (FALLBACK_STAGE if FALLBACK_STAGE in self._zone_centers
+                           else next(iter(self._zone_centers), None))
+        self._fill_slots = self._build_fill_slots()
         # Transport lane, level with the downstream zone centres and clear of
         # both rack rows.
-        self._lane_y = self._zone_centers["conveyor"][1]
+        self._lane_y = self._lane_level()
         self._background = self._build_background()
         self._noise_rng = np.random.default_rng()
+
+    def _lane_level(self) -> float:
+        """Vertical position of the transport lane, in normalised coordinates."""
+        for name in ("conveyor", *self._dwells):
+            if name in self._zone_centers:
+                return self._zone_centers[name][1]
+        return 0.5
 
     # ---------------------------------------------------------------- layout
     def _build_fill_slots(self) -> list[tuple[float, float]]:
         """18 vials in 2 rows x 9 inside the filling polygon."""
-        poly = ZONES.polygons["filling"]
-        x0, x1 = poly[0][0], poly[1][0]
-        y0, y1 = poly[0][1], poly[2][1]
+        if self._fill_zone is None:
+            # No zones configured at all. Lay the rack out across the middle
+            # so the renderer still produces something to look at.
+            x0, x1, y0, y1 = 0.05, 0.35, 0.30, 0.70
+        else:
+            poly = ZONES.polygons[self._fill_zone]
+            xs = [p[0] for p in poly]
+            ys = [p[1] for p in poly]
+            x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
         cols, rows = 9, 2
         slots = []
         for r in range(rows):
@@ -91,9 +117,11 @@ class SyntheticPlatform:
         top, bottom = GEOMETRY.platform_band_px
         img[top:bottom, :] = (74, 72, 70)  # brushed metal, slightly cool
 
-        # Zone seams, so the rendered scene is readable by eye.
+        # Zone seams, so the rendered scene is readable by eye. Taken from the
+        # polygon's extent rather than a fixed vertex index: a traced polygon
+        # has no guaranteed point ordering.
         for poly in ZONES.polygons.values():
-            x = int(poly[1][0] * self.w)
+            x = int(max(p[0] for p in poly) * self.w)
             cv2.line(img, (x, top), (x, bottom), (95, 93, 91), 1)
 
         illum = np.ones((self.h, self.w), np.float32)
@@ -141,14 +169,15 @@ class SyntheticPlatform:
         fx, fy = self._fill_slots[i]
         # Fill level rises during the shared filling step -> brightness ramp.
         fill = min(1.0, t / max(DEPARTURE_PACE_S * self.n_vials * 0.35, 1.0))
-        return VialState(i, fx, fy, "filling", hue, sat * (0.55 + 0.45 * fill),
-                         val * (0.7 + 0.3 * fill), 0.0, i in SOURCES.mock_anomalous_vials)
+        return VialState(i, fx, fy, self._fill_zone or FALLBACK_STAGE, hue,
+                         sat * (0.55 + 0.45 * fill), val * (0.7 + 0.3 * fill),
+                         0.0, i in SOURCES.mock_anomalous_vials)
 
     def _state_in_transit(self, i: int, tau: float) -> VialState | None:
         """tau = simulated seconds since this vial left the filling rack."""
         origin = self._fill_slots[i]
         elapsed = 0.0
-        for k, (stage, dwell) in enumerate(STAGE_DWELL_S.items()):
+        for k, (stage, dwell) in enumerate(self._dwells.items()):
             target = self._zone_centers[stage]
             if tau < elapsed + dwell:
                 local = tau - elapsed
@@ -212,6 +241,30 @@ class SyntheticPlatform:
 
         return VialState(i, x, y, stage, hue % 180, np.clip(sat, 0, 255),
                          np.clip(val, 0, 255), turb, anomalous)
+
+    def truth_at(self, t: float) -> dict:
+        """Ground-truth vial geometry, in pixels, for the frame at time t.
+
+        Carried on Frame.truth by the simulated backends only. Its single
+        purpose is to let GroundTruthLocalizer stand in for a real localiser
+        so that tracking, staging, storage and the dashboard can be exercised
+        end to end before the localisation question is settled. Nothing in the
+        pipeline may depend on it: a real camera leaves Frame.truth None.
+        """
+        return {
+            "vials": [
+                {
+                    "index": st.index,
+                    "cx": st.x * self.w,
+                    "cy": st.y * self.h,
+                    "radius": float(self.r_px),
+                    "stage": st.stage,
+                    "anomalous": st.anomalous,
+                }
+                for st in self.states_at(t)
+            ],
+            "sim_time_s": t,
+        }
 
     # --------------------------------------------------------------- render
     def render(self, t: float) -> np.ndarray:

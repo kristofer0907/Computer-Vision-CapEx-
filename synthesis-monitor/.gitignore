@@ -2,10 +2,16 @@ __pycache__/
 *.py[cod]
 venv/
 .venv/
+
+# Runtime data: database, snapshots, and the traced zone polygons.
+# zones.json is machine-specific calibration - it describes one physical
+# camera mount, so committing it would push one bench's geometry onto another.
 data/
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm
 *.npy
+
+.pytest_cache/
 .vscode/
 .idea/

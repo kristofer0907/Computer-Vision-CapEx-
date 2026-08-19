@@ -5,6 +5,15 @@ numpy>=1.24
 opencv-python>=4.8      # on the Pi prefer: sudo apt install python3-opencv
 flask>=3.0
 
+# Tests only.
+pytest>=7.0
+
+# Deliberately NOT here:
+#   scipy   - the only thing wanted from it was linear_sum_assignment, which
+#             is ~90 lines in pipeline/assignment.py. A 40 MB install on a Pi
+#             for one function on an 18x18 matrix is not a trade worth making.
+#   pandas  - nothing needs a dataframe; SQLite does the aggregation.
+
 # ---------------------------------------------------------------------------
 # Raspberry Pi only. Do NOT put these in the list above and do NOT pip install
 # them - they are system packages tied to the Pi camera and I2C stacks:
@@ -15,6 +24,12 @@ flask>=3.0
 # The venv must be created with --system-site-packages for picamera2 to be
 # importable inside it:
 #   python3 -m venv --system-site-packages ~/venvs/vision
+#
+# `ModuleNotFoundError: No module named 'libcamera'` on a laptop is expected
+# and handled: the drivers import picamera2 inside start(), report the
+# hardware as unavailable, and fall back to the simulator. If that error ever
+# reaches a traceback instead, something imported picamera2 at module scope -
+# that is the bug, not the missing package.
 #
 # Optional, only if the YOLO localisation route is chosen:
 #   pip install ultralytics

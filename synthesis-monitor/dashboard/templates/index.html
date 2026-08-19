@@ -6,90 +6,290 @@
 <title>CapEx Synthesis Monitor</title>
 <style>
   :root {
-    --bg: #14161a; --panel: #1c1f25; --line: #2c313a;
-    --text: #dfe3ea; --muted: #868f9e;
-    --ok: #62c76a; --warn: #e0a83c; --alert: #e05252;
+    --bg:#14161a; --panel:#1c1f25; --panel2:#22262e; --line:#2c313a;
+    --text:#dfe3ea; --muted:#868f9e;
+    --ok:#62c76a; --warn:#e0a83c; --alert:#e05252; --info:#5aa8e0;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 14px/1.45 ui-sans-serif, system-ui, "Segoe UI", sans-serif; }
-  header { padding: 12px 18px; border-bottom: 1px solid var(--line);
-           display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
-  h1 { font-size: 16px; margin: 0; font-weight: 600; }
-  .sub { color: var(--muted); font-size: 12px; }
-  main { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px 18px; }
-  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
-  .panel { background: var(--panel); border: 1px solid var(--line);
-           border-radius: 8px; overflow: hidden; }
-  .panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em;
-              color: var(--muted); margin: 0; padding: 9px 12px;
-              border-bottom: 1px solid var(--line); font-weight: 600; }
-  img.feed { width: 100%; display: block; background: #000; }
-  .stats { display: flex; gap: 18px; flex-wrap: wrap; padding: 9px 12px;
-           border-top: 1px solid var(--line); font-size: 12px; }
-  .stats b { font-weight: 600; font-variant-numeric: tabular-nums; }
-  .stats span { color: var(--muted); }
-  .pill { padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-  .live { background: rgba(98,199,106,.15); color: var(--ok); }
-  .sim { background: rgba(224,168,60,.15); color: var(--warn); }
-  .err { background: rgba(224,82,82,.16); color: var(--alert); }
-  .none { background: #23272e; color: var(--muted); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:14px/1.45 ui-sans-serif, system-ui, "Segoe UI", sans-serif; }
+  header { padding:10px 18px; border-bottom:1px solid var(--line);
+           display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  h1 { font-size:15px; margin:0; font-weight:600; }
+  .sub { color:var(--muted); font-size:12px; }
+  main { display:grid; grid-template-columns:1.4fr 1fr; gap:14px; padding:14px 18px; }
+  @media (max-width:1100px) { main { grid-template-columns:1fr; } }
+  .col { display:flex; flex-direction:column; gap:14px; min-width:0; }
+  .panel { background:var(--panel); border:1px solid var(--line);
+           border-radius:8px; overflow:hidden; }
+  .panel > h2 { font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+                color:var(--muted); margin:0; padding:9px 12px; font-weight:600;
+                border-bottom:1px solid var(--line);
+                display:flex; justify-content:space-between; gap:8px; }
+  img.feed { width:100%; display:block; background:#000; }
+  .body { padding:10px 12px; }
+  .stats { display:flex; gap:16px; flex-wrap:wrap; padding:8px 12px;
+           border-top:1px solid var(--line); font-size:12px; }
+  .stats span { color:var(--muted); }
+  .stats b { font-weight:600; font-variant-numeric:tabular-nums; }
+  .pill { padding:1px 7px; border-radius:10px; font-size:11px; font-weight:600;
+          white-space:nowrap; }
+  .live  { background:rgba(98,199,106,.15); color:var(--ok); }
+  .sim   { background:rgba(224,168,60,.15); color:var(--warn); }
+  .err   { background:rgba(224,82,82,.16); color:var(--alert); }
+  .none  { background:#23272e; color:var(--muted); }
+  .stub  { background:rgba(90,168,224,.14); color:var(--info); }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { text-align:left; color:var(--muted); font-weight:600; font-size:11px;
+       text-transform:uppercase; letter-spacing:.06em;
+       padding:6px 10px; border-bottom:1px solid var(--line); }
+  td { padding:5px 10px; border-bottom:1px solid #23262c;
+       font-variant-numeric:tabular-nums; }
+  tr:last-child td { border-bottom:none; }
+  .scroll { max-height:290px; overflow:auto; }
+  .empty { color:var(--muted); padding:14px 12px; font-size:12px; }
+  .banner { margin:0; padding:8px 18px; font-size:12px;
+            background:rgba(224,168,60,.10); color:var(--warn);
+            border-bottom:1px solid var(--line); }
+  .banner code { background:rgba(0,0,0,.25); padding:1px 5px; border-radius:3px; }
+  .stagebar { display:flex; gap:6px; flex-wrap:wrap; padding:10px 12px; }
+  .stage { background:var(--panel2); border:1px solid var(--line);
+           border-radius:6px; padding:5px 9px; font-size:11px; min-width:74px; }
+  .stage .n { display:block; font-size:16px; font-weight:600;
+              font-variant-numeric:tabular-nums; }
+  .stage .k { color:var(--muted); }
+  .sev-alert   { color:var(--alert); }
+  .sev-warning { color:var(--warn); }
+  .sev-info    { color:var(--info); }
+  .muted { color:var(--muted); }
+  .warnlist { padding:8px 12px; font-size:12px; color:var(--warn);
+              border-top:1px solid var(--line); }
+  .warnlist div { margin:2px 0; }
 </style>
 </head>
 <body>
 <header>
   <h1>CapEx Synthesis Monitor</h1>
-  <span class="sub" id="sources">sources: —</span>
-  <span class="sub">{{ n_vials }} vials</span>
+  <span class="sub" id="sources">starting…</span>
+  <span class="sub" id="uptime"></span>
 </header>
 
-<main>
-  <section class="panel">
-    <h2>Live camera</h2>
-    <img class="feed" src="/rgb_feed" alt="live camera">
-    <div class="stats" id="rgb-stats"></div>
-  </section>
+<p class="banner">
+  Detection is not implemented. Localisation, feature extraction and all five
+  detectors are stubs, and no threshold in this system has been calibrated
+  against real chemistry — nothing below is evidence about a batch.
+  {% if not zones_calibrated %}
+  Zone polygons are placeholders too; trace the real ones with
+  <code>python -m tools.edit_zones</code>.
+  {% endif %}
+</p>
 
-  <section class="panel">
-    <h2>Thermal (passive view)</h2>
-    <img class="feed" src="/thermal_feed" alt="thermal">
-    <div class="stats" id="thermal-stats"></div>
-  </section>
+<main>
+  <div class="col">
+    <section class="panel">
+      <h2><span>Live camera</span><span class="sub" id="rgb-tag"></span></h2>
+      <img class="feed" src="/feed/live" alt="live camera">
+      <div class="stats" id="rgb-stats"></div>
+    </section>
+
+    <section class="panel">
+      <h2><span>Pipeline overlay</span><span class="sub" id="pipe-tag"></span></h2>
+      <img class="feed" src="/feed/overlay" alt="analysed frame">
+      <div class="stats" id="pipe-stats"></div>
+      <div class="warnlist" id="pipe-warnings" hidden></div>
+    </section>
+
+    <section class="panel">
+      <h2><span>Thermal</span><span class="sub">passive log, not analysed</span></h2>
+      <img class="feed" src="/feed/thermal" alt="thermal">
+      <div class="stats" id="thermal-stats"></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="panel">
+      <h2><span>Stages</span><span class="sub">hysteresis N = {{ hysteresis_n }}</span></h2>
+      <div class="stagebar" id="stages"></div>
+    </section>
+
+    <section class="panel">
+      <h2><span>Vials</span><span class="sub" id="vial-count"></span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr>
+            <th>ID</th><th>Stage</th><th>In stage</th><th>Age</th>
+            <th>Position</th><th>Features</th>
+          </tr></thead>
+          <tbody id="vials"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="vials-empty">No vials tracked. The localiser is a
+        stub — implement <code>pipeline/localize.py</code>, or run against the
+        simulator to exercise the rest.</div>
+    </section>
+
+    <section class="panel">
+      <h2><span>Events</span><span class="sub" id="event-count"></span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr>
+            <th>Time</th><th>Severity</th><th>Detector</th><th>Vial</th><th>Message</th>
+          </tr></thead>
+          <tbody id="events"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="events-empty">Nothing logged yet.</div>
+    </section>
+
+    <section class="panel">
+      <h2><span>Detectors</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Name</th><th>State</th><th>Errors</th><th>Purpose</th></tr></thead>
+          <tbody id="detectors"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2><span>Workers</span></h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Process</th><th>PID</th><th>State</th><th>Frames</th>
+            <th>Errors</th><th>Dropped</th></tr></thead>
+          <tbody id="workers"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
 </main>
 
 <script>
-const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const esc = s => String(s ?? '').replace(/[&<>"]/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = (v, d = 1) => (v == null || Number.isNaN(v)) ? '—' : Number(v).toFixed(d);
+const secs = v => v == null ? '—' : (v < 90 ? `${v.toFixed(0)}s`
+                                            : `${(v / 60).toFixed(1)}m`);
+const clock = ts => ts ? new Date(ts * 1000).toLocaleTimeString() : '—';
 
 function tag(s) {
-  if (!s || s.error) return `<span class="pill err">${esc(s && s.error ? 'failed' : 'none')}</span>`;
-  if (!s.name) return '<span class="pill none">starting…</span>';
-  return s.simulated
-    ? `<span class="pill sim">${esc(s.name)} (simulated)</span>`
-    : `<span class="pill live">${esc(s.name)}</span>`;
+  if (!s || !s.name) return '<span class="pill none">starting…</span>';
+  return s.simulated ? `<span class="pill sim">${esc(s.name)} (simulated)</span>`
+                     : `<span class="pill live">${esc(s.name)}</span>`;
 }
 
-function stats(s) {
-  if (!s) return '';
-  const c = s.counters || {};
-  const age = s.last_frame_age_s == null ? '—' : s.last_frame_age_s + 's ago';
-  return `<div><span>frames</span> <b>${c.frames || 0}</b></div>
-          <div><span>errors</span> <b>${c.errors || 0}</b></div>
-          <div><span>frame id</span> <b>${s.frame_id ?? '—'}</b></div>
-          <div><span>last</span> <b>${age}</b></div>`;
+function featureSummary(f) {
+  const keys = Object.keys(f || {});
+  if (!keys.length) return '<span class="muted">none</span>';
+  return keys.slice(0, 3).map(k => `${esc(k)}=${num(f[k], 2)}`).join(' ')
+       + (keys.length > 3 ? ` <span class="muted">+${keys.length - 3}</span>` : '');
+}
+
+function renderVials(vials) {
+  const body = document.getElementById('vials');
+  document.getElementById('vials-empty').hidden = vials.length > 0;
+  document.getElementById('vial-count').textContent =
+    vials.length ? `${vials.length} tracked` : '';
+  body.innerHTML = vials.map(v => `<tr>
+      <td>${v.track_id}</td>
+      <td>${esc(v.stage) || '<span class="muted">—</span>'}</td>
+      <td>${secs(v.time_in_stage_s)}</td>
+      <td>${secs(v.age_s)}</td>
+      <td class="muted">${num(v.cx, 0)}, ${num(v.cy, 0)}</td>
+      <td>${featureSummary(v.features)}</td>
+    </tr>`).join('');
+}
+
+function renderEvents(events) {
+  const body = document.getElementById('events');
+  document.getElementById('events-empty').hidden = events.length > 0;
+  document.getElementById('event-count').textContent =
+    events.length ? `${events.length} recent` : '';
+  body.innerHTML = events.map(e => `<tr>
+      <td class="muted">${clock(e.timestamp)}</td>
+      <td class="sev-${esc(e.severity)}">${esc(e.severity)}</td>
+      <td class="muted">${esc(e.detector)}</td>
+      <td>${e.track_id ?? '—'}</td>
+      <td>${esc(e.message)}</td>
+    </tr>`).join('');
+}
+
+function renderStages(counts) {
+  const known = {{ stages | tojson }};
+  document.getElementById('stages').innerHTML = known.map(name => `
+    <div class="stage"><span class="n">${counts[name] ?? 0}</span>
+      <span class="k">${esc(name)}</span></div>`).join('');
+}
+
+function renderWorkers(health) {
+  const rows = Object.entries(health.workers || {}).map(([name, w]) => {
+    const s = w.status || {};
+    const state = w.alive ? '<span class="pill live">running</span>'
+                          : `<span class="pill err">exited ${w.exitcode ?? ''}</span>`;
+    return `<tr><td>${esc(name)}</td><td class="muted">${w.pid ?? '—'}</td>
+      <td>${state}</td><td>${s.frames ?? 0}</td>
+      <td>${s.errors ?? 0}</td><td>${s.dropped ?? 0}</td></tr>`;
+  });
+  document.getElementById('workers').innerHTML = rows.join('');
+  document.getElementById('uptime').textContent =
+    `run ${health.run_id ?? '—'} · up ${secs(health.uptime_s)} · ` +
+    `analysis every ${num(health.analysis_interval_s, 0)}s` +
+    (health.persisting ? '' : ' · not persisting');
+}
+
+async function renderDetectors() {
+  try {
+    const d = await (await fetch('/api/detectors')).json();
+    document.getElementById('detectors').innerHTML =
+      (d.detectors || []).map(x => {
+        const state = !x.enabled ? '<span class="pill err">disabled</span>'
+                    : x.implemented ? '<span class="pill live">active</span>'
+                                    : '<span class="pill stub">stub</span>';
+        return `<tr><td>${esc(x.name)}</td><td>${state}</td>
+          <td>${x.errors ?? 0}</td><td class="muted">${esc(x.description)}</td></tr>`;
+      }).join('') ||
+      '<tr><td colspan="4" class="muted">pipeline not running</td></tr>';
+  } catch (err) { console.error(err); }
 }
 
 async function refresh() {
   try {
     const st = await (await fetch('/api/state')).json();
-    const s = st.sources || {};
+    const s = st.sources || {}, p = st.pipeline || {}, h = st.health || {};
+
     document.getElementById('sources').innerHTML =
-      'rgb ' + tag(s.rgb) + ' &nbsp; thermal ' + tag(s.thermal);
-    document.getElementById('rgb-stats').innerHTML = stats(s.rgb);
-    document.getElementById('thermal-stats').innerHTML = stats(s.thermal);
+      'camera ' + tag(s.rgb) + ' &nbsp; thermal ' + tag(s.thermal);
+    document.getElementById('rgb-stats').innerHTML =
+      `<div><span>frame</span> <b>${s.rgb?.frame_id ?? '—'}</b></div>
+       <div><span>age</span> <b>${secs(s.rgb?.age_s)}</b></div>`;
+    document.getElementById('thermal-stats').innerHTML =
+      `<div><span>min</span> <b>${num(s.thermal?.min_c)} °C</b></div>
+       <div><span>mean</span> <b>${num(s.thermal?.mean_c)} °C</b></div>
+       <div><span>max</span> <b>${num(s.thermal?.max_c)} °C</b></div>
+       <div><span>age</span> <b>${secs(s.thermal?.age_s)}</b></div>`;
+
+    const timings = Object.entries(p.timings_ms || {})
+      .map(([k, v]) => `${k} ${v}ms`).join(' · ');
+    document.getElementById('pipe-stats').innerHTML =
+      `<div><span>frame</span> <b>${p.frame_id ?? '—'}</b></div>
+       <div><span>vials</span> <b>${p.n_vials ?? 0}</b></div>
+       <div><span>age</span> <b>${secs(p.age_s)}</b></div>
+       <div class="muted">${esc(timings)}</div>`;
+
+    const warnBox = document.getElementById('pipe-warnings');
+    warnBox.hidden = !(p.warnings || []).length;
+    warnBox.innerHTML = (p.warnings || []).map(w => `<div>${esc(w)}</div>`).join('');
+
+    renderStages(p.stage_counts || {});
+    renderVials(p.vials || []);
+    renderEvents(st.events || []);
+    renderWorkers(h);
   } catch (err) { console.error(err); }
 }
-refresh();
+
+refresh(); renderDetectors();
 setInterval(refresh, {{ refresh_ms }});
+setInterval(renderDetectors, {{ refresh_ms }} * 5);
 </script>
 </body>
 </html>
