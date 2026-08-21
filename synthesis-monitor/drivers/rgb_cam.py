@@ -77,6 +77,24 @@ class PiCameraSource(CameraSource):
             img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
         return Frame(img, time.time(), self._next_id(), self.name, False)
 
+    def apply_controls(self, controls: dict) -> dict:
+        """Push libcamera controls at the sensor and report what stuck.
+
+        Only sensor-side settings are reachable from here - exposure, gain and
+        white balance. Focus, focal length and aperture are mechanical rings on
+        the Arducam varifocal and no amount of software touches them.
+
+        Returns the metadata of one frame taken after the controls were applied,
+        so the caller can record what the sensor actually did rather than what
+        it was asked to do; the two differ when a request is out of range.
+        """
+        if self._cam is None:
+            raise RuntimeError("apply_controls() before start()")
+        self._cam.set_controls(controls)
+        time.sleep(0.5)          # controls take effect over a frame or two
+        self._cam.capture_array()
+        return dict(self._cam.capture_metadata())
+
     def stop(self) -> None:
         if self._cam is not None:
             try:
