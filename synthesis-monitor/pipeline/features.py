@@ -100,3 +100,38 @@ def create_extractor(name: str = "auto") -> FeatureExtractor:
         f"unknown feature extractor {name!r}. Implement it in "
         "pipeline/features.py and register it here."
     )
+
+
+
+import cv2
+
+
+def segment(img):
+    img = cv2.imread(img)
+    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (9, 9), 2)
+    # bridges small gaps in a vial's rim (glare, thin reflection breaks)
+    # without being big enough to fill in the gripper's much larger opening
+    close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    gray = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, close_kernel)
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 100,
+                               param1=90,param2=55,
+                               minRadius=50,maxRadius=90)
+    if circles is not None:
+        circles = np.uint16(np.around(circles))
+        for i in circles[0, :]:
+            center = (i[0], i[1])
+            # circle center
+            cv2.circle(img, center, 1, (0, 100, 100), 3)
+            # circle outline
+            radius = i[2]
+            cv2.circle(img, center, radius, (255, 0, 255), 3)
+    
+    cv2.namedWindow("detected circles", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("detected circles", 1200, 800)  # adjust to whatever fits your screen
+    
+    cv2.imshow("detected circles", img)
+    cv2.waitKey(0)
+
+if __name__ == "__main__":
+    segment("/home/kkristjansson/DTU/CAPeX/Computer-Vision-CapEx-/synthesis-monitor/capture/second_iteration/crucibles/20260828_164353_0000_undistorted.jpg")

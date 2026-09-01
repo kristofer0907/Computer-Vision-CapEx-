@@ -84,10 +84,9 @@ _DEFAULT_POLYGONS: dict[str, list[tuple[float, float]]] = {
     "cooling": _band_rect(0.82, 0.97),
 }
 
-# Process order. "oven" is not a polygon: it is off-frame and inferred from a
-# vial disappearing after a confirmed cooling detection.
+# Process order.
 STAGE_ORDER: tuple[str, ...] = (
-    "filling", "conveyor", "lidding", "heating", "cooling", "oven",
+    "storing", "injection", "heating", "collection",
 )
 
 ZONES_FILE = DATA_DIR / "zones.json"
