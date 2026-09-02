@@ -106,32 +106,110 @@ def create_extractor(name: str = "auto") -> FeatureExtractor:
 import cv2
 
 
-def segment(img):
-    img = cv2.imread(img)
-    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (9, 9), 2)
-    # bridges small gaps in a vial's rim (glare, thin reflection breaks)
+# One plate slot has a double-walled jar that never clears the main Hough
+# threshold. Rechecked here with a looser threshold instead of loosening
+# globally, which would pull in empty pegboard holes. Fixes 8 frames, no
+# new false positives (data/crucible_review.json).
+_SECOND_PASS_ROI = (2050, 1250, 2450, 1650)  # x0, y0, x1, y1
+
+
+def _hough_pass(gray0: np.ndarray, min_r: int, max_r: int, param1: int,
+                 param2: int, min_dist: int,
+                 min_mean: float) -> list[tuple[float, float, float]]:
+    """Blur + close + HoughCircles + a brightness floor, on one grayscale image.
+
+    The brightness floor kills a dark bolt elsewhere in frame that otherwise
+    reads as a circle (real crucibles score >=54 mean gray, the bolt ~9).
+    """
+    gray = cv2.GaussianBlur(gray0, (9, 9), 2)
+    # bridges small gaps in a crucible's rim (glare, thin reflection breaks)
     # without being big enough to fill in the gripper's much larger opening
     close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
     gray = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, close_kernel)
-    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 100,
-                               param1=90,param2=55,
-                               minRadius=50,maxRadius=90)
-    if circles is not None:
-        circles = np.uint16(np.around(circles))
-        for i in circles[0, :]:
-            center = (i[0], i[1])
-            # circle center
-            cv2.circle(img, center, 1, (0, 100, 100), 3)
-            # circle outline
-            radius = i[2]
-            cv2.circle(img, center, radius, (255, 0, 255), 3)
-    
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, min_dist,
+                                param1=param1, param2=param2,
+                                minRadius=min_r, maxRadius=max_r)
+    if circles is None:
+        return []
+
+    h, w = gray0.shape
+    out: list[tuple[float, float, float]] = []
+    for cx, cy, r in circles[0]:
+        mask = np.zeros((h, w), np.uint8)
+        cv2.circle(mask, (int(cx), int(cy)), int(r * 0.85), 255, -1)
+        if gray0[mask == 255].mean() >= min_mean:
+            out.append((float(cx), float(cy), float(r)))
+    return out
+
+
+def detect_crucibles(img: np.ndarray, min_r: int = 50, max_r: int = 100,
+                      param1: int = 90, param2: int = 55, min_dist: int = 100,
+                      min_mean: float = 35.0) -> list[tuple[float, float, float]]:
+    """Find standing crucibles (glass or metal jars) in one full-frame image.
+
+    minRadius/maxRadius/param2 exclude empty pegboard holes - don't loosen
+    globally for a rare miss, use tools/review_crucibles.py instead.
+
+    Returns (cx, cy, r) in pixels, one per accepted circle.
+    """
+    gray0 = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    out = _hough_pass(gray0, min_r, max_r, param1, param2, min_dist, min_mean)
+
+    x0, y0, x1, y1 = _SECOND_PASS_ROI
+    roi_hits = _hough_pass(gray0[y0:y1, x0:x1], min_r=60, max_r=max_r,
+                            param1=param1, param2=35, min_dist=min_dist,
+                            min_mean=100.0)
+    for cx, cy, r in roi_hits:
+        cx, cy = cx + x0, cy + y0
+        if all((cx - px) ** 2 + (cy - py) ** 2 > 40 ** 2 for px, py, _ in out):
+            out.append((cx, cy, r))
+    return out
+
+
+def lid_score(img: np.ndarray, cx: float, cy: float, r: float,
+              frac: float = 0.55) -> float:
+    """Local contrast (Laplacian variance) in the central `frac` of a crucible.
+
+    A lid breaks up the smooth open-jar interior whether it reads bright
+    (metal jars) or dark (glass) - contrast catches both, brightness alone
+    didn't. Threshold calibrated against data/lid_review.json.
+    """
+    h, w = img.shape[:2]
+    rr = r * frac
+    x0, y0 = max(int(cx - rr), 0), max(int(cy - rr), 0)
+    x1, y1 = min(int(cx + rr), w), min(int(cy + rr), h)
+    crop = cv2.cvtColor(img[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.float32)
+    if crop.size == 0:
+        return 0.0
+    return float(cv2.Laplacian(crop, cv2.CV_32F, ksize=3).var())
+
+
+# Tuned on data/lid_review.json (225 labels): 8 misses, all open->lid, from
+# glare in one tray slot plus a flush glass disc. Fix with a better feature,
+# not by nudging this number.
+LID_SCORE_THRESHOLD = 585.0
+
+
+def has_lid(img: np.ndarray, cx: float, cy: float, r: float,
+            threshold: float = LID_SCORE_THRESHOLD) -> bool:
+    """Best-effort yes/no over lid_score() - see LID_SCORE_THRESHOLD."""
+    return lid_score(img, cx, cy, r) >= threshold
+
+
+def segment(path: str) -> None:
+    """Manual sanity check: run detect_crucibles on one file and show it."""
+    img = cv2.imread(path)
+    for cx, cy, r in detect_crucibles(img):
+        center = (int(cx), int(cy))
+        cv2.circle(img, center, 1, (0, 100, 100), 3)
+        cv2.circle(img, center, int(r), (255, 0, 255), 3)
+
     cv2.namedWindow("detected circles", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("detected circles", 1200, 800)  # adjust to whatever fits your screen
-    
+
     cv2.imshow("detected circles", img)
     cv2.waitKey(0)
 
+
 if __name__ == "__main__":
-    segment("/home/kkristjansson/DTU/CAPeX/Computer-Vision-CapEx-/synthesis-monitor/capture/second_iteration/crucibles/20260828_164353_0000_undistorted.jpg")
+    segment("capture/second_iteration/crucibles/undistored/20260828_164353_0000.jpg")
