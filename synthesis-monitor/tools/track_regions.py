@@ -269,15 +269,23 @@ def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
                 elif zone == REGION_TRACKING.cooling_zone:
                     vial_id = lineage.vial_on_cooling(t.slot_id)
 
+            # Where a handoff id exists it IS the identity, so it takes the
+            # centre. The SlotTracker number is keyed to the slot, not the
+            # crucible - on a heater it stays put across a replacement, which
+            # is exactly the thing being corrected, so showing it as the
+            # headline number contradicts the mechanism underneath it.
             if vial_id:
-                where = short_vial_id(vial_id)
-            elif t.slot_id is not None:
+                headline = short_vial_id(vial_id)
+            else:
+                headline = track_label(t.track_id)
+
+            if t.slot_id is not None:
                 where = f"{zone[:4]} {t.slot_id}"
             elif t.track_id in queue:
                 where = f"{zone[:4]} q{queue.index(t.track_id) + 1}"
             else:
                 where = zone[:4]
-            _text(out, track_label(t.track_id), c, color, scale * 0.62, thick,
+            _text(out, headline, c, color, scale * 0.62, thick,
                   center=True)
             _text(out, where, (c[0], c[1] + r + int(round(26 * scale))),
                   color, scale * 0.46, max(1, thick - 1), center=True)
