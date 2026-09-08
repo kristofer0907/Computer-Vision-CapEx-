@@ -94,10 +94,28 @@ def summarize(coord: RegionCoordinator, results: dict, frame_idx: int) -> str:
     return "  ".join(parts)
 
 
+def _text(out: np.ndarray, s: str, org: tuple[int, int], color, scale: float,
+          thick: int, center: bool = False) -> None:
+    """Label with a dark outline, so it stays readable over bright aluminium
+    and dark pegboard alike. `center` treats `org` as the text's midpoint."""
+    if center:
+        (tw, th), _ = cv2.getTextSize(s, cv2.FONT_HERSHEY_SIMPLEX, scale, thick)
+        org = (org[0] - tw // 2, org[1] + th // 2)
+    cv2.putText(out, s, org, cv2.FONT_HERSHEY_SIMPLEX, scale, (20, 22, 26),
+                thick + 2, cv2.LINE_AA)
+    cv2.putText(out, s, org, cv2.FONT_HERSHEY_SIMPLEX, scale, color,
+                thick, cv2.LINE_AA)
+
+
 def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
                  results: dict) -> np.ndarray:
     out = coord.zone_map.draw(image, color=BASE_BGR)
     handed_off = {tid for tid, _from, _to in coord.handoffs_this_frame()}
+
+    # These frames are 4056 px wide; text sized for a 1280 px preview is
+    # unreadable on them. Scale the labels to the image instead.
+    scale = max(0.45, out.shape[1] / 2600.0)
+    thick = max(1, int(round(out.shape[1] / 1400.0)))
 
     for zone, tracker in coord.trackers.items():
         if isinstance(tracker, SlotTracker):
@@ -105,33 +123,51 @@ def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
                 c = (int(round(x)), int(round(y)))
                 cv2.circle(out, c, int(round(tracker.slot_radius_px)),
                           SLOT_BGR, 1, cv2.LINE_AA)
-                cv2.putText(out, str(sid), (c[0] + 6, c[1] - 6),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.35, SLOT_BGR, 1, cv2.LINE_AA)
+                _text(out, str(sid), (c[0] + 8, c[1] - 8), SLOT_BGR,
+                      scale * 0.5, 1)
         elif isinstance(tracker, FifoTracker):
             entry, exit_ = tracker.lane_endpoints()
             a = tuple(int(round(v)) for v in entry)
             b = tuple(int(round(v)) for v in exit_)
-            cv2.line(out, a, b, LANE_BGR, 2, cv2.LINE_AA)
-            cv2.drawMarker(out, a, LANE_BGR, cv2.MARKER_TRIANGLE_UP, 10, 2)
-            cv2.drawMarker(out, b, LANE_BGR, cv2.MARKER_SQUARE, 10, 2)
+            cv2.line(out, a, b, LANE_BGR, thick, cv2.LINE_AA)
+            cv2.drawMarker(out, a, LANE_BGR, cv2.MARKER_TRIANGLE_UP, 24, thick)
+            cv2.drawMarker(out, b, LANE_BGR, cv2.MARKER_SQUARE, 24, thick)
+            _text(out, f"{zone} entry", (a[0] + 14, a[1]), LANE_BGR,
+                  scale * 0.6, 1)
+            _text(out, f"{zone} exit", (b[0] + 14, b[1]), LANE_BGR,
+                  scale * 0.6, 1)
 
     for zone, (active, closed) in results.items():
+        queue = (coord.trackers[zone].queue_order()
+                 if isinstance(coord.trackers[zone], FifoTracker) else [])
         for t in active:
             color = (HANDOFF_BGR if t.track_id in handed_off
                      else FRESH_BGR if t.hits == 1 else CONTINUING_BGR)
             c = (int(round(t.cx)), int(round(t.cy)))
-            cv2.circle(out, c, int(round(t.radius)), color, 2, cv2.LINE_AA)
-            label = f"{t.track_id}"
+            r = int(round(t.radius))
+            cv2.circle(out, c, r, color, thick, cv2.LINE_AA)
+
+            # The id goes inside the disc and the zone just under it: slots
+            # sit ~140 px apart, so a wide label above each one collides with
+            # its neighbour's.
             if t.slot_id is not None:
-                label += f":{t.slot_id}"
-            cv2.putText(out, label, (c[0] - 10, c[1] - int(round(t.radius)) - 6),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1, cv2.LINE_AA)
+                where = f"{zone[:4]} {t.slot_id}"
+            elif t.track_id in queue:
+                where = f"{zone[:4]} q{queue.index(t.track_id) + 1}"
+            else:
+                where = zone[:4]
+            _text(out, str(t.track_id), c, color, scale * 0.62, thick,
+                  center=True)
+            _text(out, where, (c[0], c[1] + r + int(round(26 * scale))),
+                  color, scale * 0.46, max(1, thick - 1), center=True)
+
         for t in closed:
             c = (int(round(t.cx)), int(round(t.cy)))
-            cv2.drawMarker(out, c, CLOSED_BGR, cv2.MARKER_TILTED_CROSS, 14, 2)
-            cv2.putText(out, f"{t.track_id} {t.closed_reason}",
-                       (c[0] + 8, c[1] + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
-                       CLOSED_BGR, 1, cv2.LINE_AA)
+            cv2.drawMarker(out, c, CLOSED_BGR, cv2.MARKER_TILTED_CROSS,
+                           28, thick)
+            _text(out, f"ID {t.track_id} {t.closed_reason}",
+                  (c[0] + 16, c[1] + 8), CLOSED_BGR, scale * 0.72,
+                  max(1, thick - 1))
 
     return out
 
