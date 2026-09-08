@@ -86,12 +86,37 @@ FALLBACK_DISPLAY_RADIUS_PX = 22.0  # only used to render circles when no radius 
 
 
 def undistort_image(img: np.ndarray) -> np.ndarray:
+    """Lens-correct one frame using the saved calibration.
+
+    The intrinsics are stored for the resolution they were calibrated at
+    (image_size in the npz). Focal length and principal point are in pixels,
+    so they only apply at that resolution - handing this a 1280x720 preview
+    and a 4056x3040 matrix silently over-corrects by ~3x. Scale to fit.
+    Distortion coefficients are normalised and do not scale.
+    """
     if not CALIBRATION_FILE.exists():
         raise SystemExit(
             f"No calibration file at {CALIBRATION_FILE}. "
             f"Run `python -m tools.calibrate_camera` first.")
     data = np.load(CALIBRATION_FILE)
-    return cv2.undistort(img, data["camera_matrix"], data["dist_coeffs"])
+    K = data["camera_matrix"].astype(np.float64).copy()
+    dist = data["dist_coeffs"]
+
+    h, w = img.shape[:2]
+    if "image_size" in data:
+        cal_w, cal_h = (int(v) for v in data["image_size"])
+        if (w, h) != (cal_w, cal_h):
+            sx, sy = w / cal_w, h / cal_h
+            if abs(sx - sy) > 0.01:
+                log.warning(
+                    "frame %dx%d has a different aspect ratio than the "
+                    "%dx%d calibration - undistortion will be wrong if this "
+                    "is a crop rather than a rescale", w, h, cal_w, cal_h)
+            K[0, 0] *= sx
+            K[0, 2] *= sx
+            K[1, 1] *= sy
+            K[1, 2] *= sy
+    return cv2.undistort(img, K, dist)
 
 
 def pick_source_image(source_image: str | None) -> Path:

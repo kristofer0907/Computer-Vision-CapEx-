@@ -282,8 +282,14 @@ def main(argv: list[str] | None = None) -> int:
                      help="capture from the camera instead: auto | picamera2 | mock")
     p.add_argument("--interval", type=float, default=10.0,
                    help="seconds between live captures (default: 10)")
-    p.add_argument("--undistort", action="store_true",
-                   help="undistort each frame first (see module docstring)")
+    und = p.add_mutually_exclusive_group()
+    und.add_argument("--undistort", action="store_true", default=None,
+                     help="lens-correct each frame before tracking. On by "
+                          "default when --live, since the camera's raw output "
+                          "is distorted and the slot layouts are not")
+    und.add_argument("--no-undistort", dest="undistort", action="store_false",
+                     help="skip lens correction (the right choice for a "
+                          "folder that is already undistorted)")
     p.add_argument("--localizer", default="crucible",
                    help="where crucibles come from (default: detect_crucibles)")
     p.add_argument("--frames", type=int, default=None,
@@ -298,6 +304,13 @@ def main(argv: list[str] | None = None) -> int:
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(levelname)-7s %(message)s")
+    # The hand-marked slot and lane layouts live in undistorted pixels, so a
+    # raw camera frame has to be corrected before anything is matched against
+    # them. At the storing rack that is worth ~100 px against a 45 px gate -
+    # skipping it does not degrade matching there, it stops it working.
+    if args.undistort is None:
+        args.undistort = bool(args.live)
+
     ensure_dirs()
     overlay_dir = Path(args.overlay_dir)
     overlay_dir.mkdir(parents=True, exist_ok=True)
@@ -308,6 +321,8 @@ def main(argv: list[str] | None = None) -> int:
     localizer = create_localizer(args.localizer)
     localizer.start()
 
+    log.info("lens correction: %s",
+             "on" if args.undistort else "off (frames assumed already undistorted)")
     if args.live:
         log.info("live capture from %r every %.1fs -> %s   (ctrl-c to stop)",
                  args.live, args.interval, overlay_dir)
