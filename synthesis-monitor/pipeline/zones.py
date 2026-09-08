@@ -16,7 +16,7 @@ import math
 import cv2
 import numpy as np
 
-from config import GEOMETRY, TRACKING, ZONES
+from config import GEOMETRY, STAGE_ORDER, TRACKING, ZONES
 from pipeline.types import Track
 
 log = logging.getLogger(__name__)
@@ -73,7 +73,12 @@ class ZoneMap:
                            dtype=np.float32)
             for name, poly in src.items()
         }
-        self.names = [n for n in ZONES.order() if n in self.polygons_px]
+        # Ordered by STAGE_ORDER, against the polygons this instance was
+        # actually built with - not ZONES.order(), which is about the global
+        # config's own polygons and silently drops any zone passed in here
+        # that isn't also part of that global default set.
+        self.names = ([n for n in STAGE_ORDER if n in self.polygons_px]
+                     + [n for n in src if n not in STAGE_ORDER])
 
     def zone_at(self, x: float, y: float) -> str | None:
         """Name of the zone containing (x, y), or None.

@@ -210,6 +210,37 @@ class NullLocalizer(Localizer):
         return []
 
 
+class CrucibleLocalizer(Localizer):
+    """Wraps pipeline.features.detect_crucibles(). Classical CV, real-capable.
+
+    Not registered under "auto" - the live pipeline (pipeline/runner.py) is
+    still built around the vial-flow model and untouched by this. This exists
+    for tools/track_regions.py and other standalone crucible-tracking work.
+
+    Does no undistortion. A localiser answers "where are the crucibles", not
+    "please fix my lens distortion first" - that is the caller's job, since
+    it also has to apply consistently to the zone polygons and slot
+    coordinates the caller matches these detections against.
+    """
+
+    name = "crucible"
+    real_capable = True
+
+    def __init__(self, min_r: int = 50, max_r: int = 100, param1: int = 90,
+                 param2: int = 55, min_dist: int = 100,
+                 min_mean: float = 35.0) -> None:
+        self._kwargs = dict(min_r=min_r, max_r=max_r, param1=param1,
+                            param2=param2, min_dist=min_dist, min_mean=min_mean)
+
+    def locate(self, frame: Frame) -> list[Detection]:
+        from pipeline.features import detect_crucibles  # heavier cv2 pass, lazy like the others
+        out: list[Detection] = []
+        for cx, cy, r in detect_crucibles(frame.image, **self._kwargs):
+            out.append(Detection(cx=cx, cy=cy, radius=r, confidence=1.0,
+                                 meta={"detector": "hough_crucible"}))
+        return out
+
+
 _warned: set[str] = set()
 
 
@@ -234,6 +265,8 @@ def create_localizer(name: str = "auto") -> Localizer:
         return ManualLocalizer()
     if key in ("null", "none"):
         return NullLocalizer()
+    if key in ("crucible", "hough_crucible"):
+        return CrucibleLocalizer()
     if key == "auto":
         # Hand marks if they exist - they are the only thing that works on a
         # real capture - otherwise the simulator's ground truth.

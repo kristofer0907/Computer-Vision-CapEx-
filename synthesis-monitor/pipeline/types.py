@@ -79,6 +79,11 @@ class Track:
     # Every committed stage transition, oldest first: (stage, timestamp).
     stage_log: list[tuple[str, float]] = field(default_factory=list)
 
+    # Which physical hand-marked slot this track currently occupies, for
+    # trackers anchored to fixed positions (pipeline.region_trackers.SlotTracker).
+    # None for tracks that aren't slot-anchored (e.g. a FIFO queue entry).
+    slot_id: int | None = None
+
     # Set when the track ends. "oven" means inferred oven entry, "lost" means
     # it vanished from somewhere it should not have.
     closed_reason: str | None = None

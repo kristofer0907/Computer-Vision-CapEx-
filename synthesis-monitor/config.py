@@ -278,6 +278,64 @@ TRACKING = TrackingConfig()
 
 
 # --------------------------------------------------------------------------
+# Region tracking -- real-hardware crucible zones (storing/injection/heating/
+# collection), independent of the vial-flow TrackingConfig above.
+# PLACEHOLDER VALUES pending real captured sequences to tune against, same
+# caveat as TRACKING.stage_hysteresis_n.
+# --------------------------------------------------------------------------
+@dataclass(frozen=True)
+class RegionTrackingConfig:
+    """Per-zone tracking for the real crucible platform.
+
+    storing/heating/collection have fixed hand-marked slot positions (see
+    tools/mark_slots.py, pipeline.region_trackers.SlotTracker). injection has
+    no fixed positions - it is a narrow lane crucibles move through in a
+    fixed order, tracked by pipeline.region_trackers.FifoTracker against a
+    hand-marked entry/exit axis (tools/mark_slots.py --lane).
+    """
+
+    # zone name -> slot JSON filename under DATA_DIR. Not slots_<zone>.json
+    # because the files predate this naming and were produced one at a time
+    # by tools/mark_slots.py --stage filling.
+    slot_files: dict[str, str] = field(default_factory=lambda: {
+        "storing": "slots_filling_beginning.json",
+        "heating": "slots_filling_heaters.json",
+        "collection": "slots_filling_end_zone.json",
+    })
+
+    # zone name -> lane JSON filename under DATA_DIR, produced by
+    # tools/mark_slots.py --stage <zone> --lane.
+    lane_files: dict[str, str] = field(default_factory=lambda: {
+        "injection": "lane_injection.json",
+    })
+
+    # The physical process order. RegionCoordinator uses this - not a
+    # per-zone adjacency table - to decide which zones may hand a track's
+    # identity off to which others: a track closing in zone i may be picked
+    # up by a new track spawning in zone i-1 or i+1.
+    region_sequence: tuple[str, ...] = (
+        "storing", "injection", "heating", "collection",
+    )
+
+    # Frames a slot may sit unmatched before its track is closed as vacated.
+    slot_max_missed_frames: int = 2
+
+    # Frames a FIFO queue entry may go unmatched before its track is closed.
+    fifo_max_missed_frames: int = 2
+
+    # Per-frame gate on how far a detection may have moved along the lane
+    # axis and still be considered the same queue entry, in mm.
+    fifo_step_gate_mm: float = 120.0
+
+    # Seconds a closed track stays eligible to donate its id to a new track
+    # in a neighbouring (or the same) zone before the handoff window expires.
+    handoff_window_s: float = 120.0
+
+
+REGION_TRACKING = RegionTrackingConfig()
+
+
+# --------------------------------------------------------------------------
 # Storage
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)

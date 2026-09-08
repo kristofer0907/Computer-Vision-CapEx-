@@ -4,6 +4,7 @@ a calibration shot), save them as a reference JSON.
     python -m tools.mark_slots --stage filling
     python -m tools.mark_slots --stage filling --source-image path/to/img.jpg
     python -m tools.mark_slots --stage filling --radius 22
+    python -m tools.mark_slots --stage injection --lane
 
 By default this undistorts the first image in
 capture/second_iteration/calibration_imgs/ (using the saved calibration at
@@ -38,6 +39,22 @@ Why this exists: mirrors tools/mark_vials.py, but for the *fixed* slot
 layout (crucible rack holes, lidding stations, etc.) rather than per-frame
 vial detections - a one-time reference to check live detections against,
 not something re-marked every capture.
+
+--lane switches to a second mode for a region with no fixed slots at all: a
+narrow lane a crucible moves through single-file (see
+pipeline.region_trackers.FifoTracker). Instead of N slot positions, click
+exactly 2 points - where a crucible enters the lane, then where it exits.
+Controls are the same minus the radius keys, which don't apply.
+
+Output (data/lane_<stage>.json by default):
+
+    {
+      "stage": "injection",
+      "image": "injection_reference.jpg",
+      "image_size": [4056, 3040],
+      "entry": [1820, 1210],
+      "exit": [2340, 1690]
+    }
 """
 
 from __future__ import annotations
@@ -103,13 +120,16 @@ def build_reference(stage: str, source_image: str | None, force: bool) -> Path:
 
 
 class SlotMarker:
-    def __init__(self, image: np.ndarray, radius: float) -> None:
+    def __init__(self, image: np.ndarray, radius: float, lane: bool = False) -> None:
         self.image = image
         self.radius = radius
+        self.lane = lane
         self.points: list[tuple[float, float]] = []
 
     def on_mouse(self, event, x, y, _flags, _param) -> None:
         if event == cv2.EVENT_LBUTTONDOWN:
+            if self.lane and len(self.points) >= 2:
+                return  # entry/exit only - right click one off first
             self.points.append((float(x), float(y)))
         elif event == cv2.EVENT_RBUTTONDOWN and self.points:
             nearest = min(self.points,
@@ -118,15 +138,28 @@ class SlotMarker:
 
     def render(self) -> np.ndarray:
         out = self.image.copy()
+        labels = ("entry", "exit") if self.lane else None
+
+        if self.lane and len(self.points) == 2:
+            a, b = (int(round(v)) for v in self.points[0]), (int(round(v)) for v in self.points[1])
+            cv2.line(out, tuple(a), tuple(b), SLOT_BGR, 2, cv2.LINE_AA)
+
         for i, (x, y) in enumerate(self.points):
             c = (int(round(x)), int(round(y)))
-            cv2.circle(out, c, int(round(self.radius)), SLOT_BGR, 2, cv2.LINE_AA)
-            cv2.drawMarker(out, c, SLOT_BGR, cv2.MARKER_CROSS, 8, 1)
-            cv2.putText(out, str(i), (c[0] + 8, c[1] - 8),
+            label = labels[i] if labels else str(i)
+            if not self.lane:
+                cv2.circle(out, c, int(round(self.radius)), SLOT_BGR, 2, cv2.LINE_AA)
+            cv2.drawMarker(out, c, SLOT_BGR, cv2.MARKER_CROSS, 10, 2)
+            cv2.putText(out, label, (c[0] + 8, c[1] - 8),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, SLOT_BGR, 1, cv2.LINE_AA)
 
-        banner = (f"{len(self.points)} slots   r={self.radius:.0f}px   "
-                  f"[+/- radius, c clear, s save, q quit]")
+        if self.lane:
+            banner = (f"{len(self.points)}/2 points   "
+                      f"[left click entry then exit, right click to remove, "
+                      f"c clear, s save, q quit]")
+        else:
+            banner = (f"{len(self.points)} slots   r={self.radius:.0f}px   "
+                      f"[+/- radius, c clear, s save, q quit]")
         cv2.rectangle(out, (0, 0), (out.shape[1], 28), (20, 22, 26), -1)
         cv2.putText(out, banner, (8, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.55,
                     (223, 227, 234), 1, cv2.LINE_AA)
@@ -146,9 +179,9 @@ def _edit(marker: SlotMarker) -> str:
             return "quit"
         if key == ord("s"):
             return "save"
-        if key in (ord("+"), ord("=")):
+        if not marker.lane and key in (ord("+"), ord("=")):
             marker.radius += 1
-        elif key in (ord("-"), ord("_")):
+        elif not marker.lane and key in (ord("-"), ord("_")):
             marker.radius = max(2.0, marker.radius - 1)
         elif key == ord("c"):
             marker.points.clear()
@@ -168,9 +201,13 @@ def main(argv: list[str] | None = None) -> int:
                    help="re-undistort even if a reference image for this "
                         "stage already exists")
     p.add_argument("--radius", type=float, default=DEFAULT_RADIUS_PX,
-                   help="starting slot radius in pixels")
+                   help="starting slot radius in pixels (ignored with --lane)")
+    p.add_argument("--lane", action="store_true",
+                   help="mark a 2-point entry/exit lane instead of N slots "
+                        "(see pipeline.region_trackers.FifoTracker)")
     p.add_argument("--out",
-                   help="output JSON path (default: data/slots_<stage>.json)")
+                   help="output JSON path (default: data/slots_<stage>.json, "
+                        "or data/lane_<stage>.json with --lane)")
     args = p.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
@@ -181,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
     if image is None:
         raise SystemExit(f"could not read reference image {ref_path}")
 
-    marker = SlotMarker(image, args.radius)
+    marker = SlotMarker(image, args.radius, lane=args.lane)
     cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(WINDOW, min(1500, image.shape[1]), min(950, image.shape[0]))
     cv2.setMouseCallback(WINDOW, marker.on_mouse)
@@ -199,18 +236,33 @@ def main(argv: list[str] | None = None) -> int:
         log.warning("no slots marked, not writing")
         return 1
 
-    result = {
-        "stage": args.stage,
-        "image": ref_path.name,
-        "image_size": [image.shape[1], image.shape[0]],
-        "slot_radius_px": round(marker.radius, 1),
-        "slots": marker.slots(),
-    }
+    if args.lane:
+        if len(marker.points) != 2:
+            log.warning("--lane needs exactly 2 points (entry, exit), got %d - "
+                       "not writing", len(marker.points))
+            return 1
+        result = {
+            "stage": args.stage,
+            "image": ref_path.name,
+            "image_size": [image.shape[1], image.shape[0]],
+            "entry": [int(round(marker.points[0][0])), int(round(marker.points[0][1]))],
+            "exit": [int(round(marker.points[1][0])), int(round(marker.points[1][1]))],
+        }
+        default_out = DATA_DIR / f"lane_{args.stage}.json"
+    else:
+        result = {
+            "stage": args.stage,
+            "image": ref_path.name,
+            "image_size": [image.shape[1], image.shape[0]],
+            "slot_radius_px": round(marker.radius, 1),
+            "slots": marker.slots(),
+        }
+        default_out = DATA_DIR / f"slots_{args.stage}.json"
 
-    out_path = Path(args.out) if args.out else DATA_DIR / f"slots_{args.stage}.json"
+    out_path = Path(args.out) if args.out else default_out
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(result, indent=2))
-    log.info("wrote %d slots to %s", len(marker.points), out_path)
+    log.info("wrote %d point(s) to %s", len(marker.points), out_path)
     return 0
 
 
