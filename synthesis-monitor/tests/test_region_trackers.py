@@ -478,6 +478,50 @@ def test_crucible_localizer_wraps_detect_crucibles(monkeypatch):
     assert loc.real_capable
 
 
+def test_detect_crucibles_survives_a_frame_smaller_than_its_roi():
+    """Its second-pass ROI is in full-capture pixels.
+
+    On anything smaller - a 1280x720 preview, which is what the live camera
+    is configured for - the slice came back empty and OpenCV threw, so live
+    capture died on the first frame.
+    """
+    from pipeline.features import detect_crucibles
+
+    small = np.zeros((720, 1280, 3), np.uint8)
+    assert detect_crucibles(small) == []          # no crash, no detections
+
+    tall = np.zeros((3040, 1280, 3), np.uint8)    # wide enough, short enough
+    assert isinstance(detect_crucibles(tall), list)
+
+
+def test_lid_state_reads_the_calibrated_threshold(monkeypatch):
+    from config import DETECTION
+    from pipeline.types import Track
+    from tools.track_regions import lid_state
+
+    import tools.track_regions as tr
+    monkeypatch.setattr("pipeline.features.lid_score",
+                        lambda *a, **k: DETECTION.lid_score_threshold + 1)
+    t = Track(track_id=1, cx=10.0, cy=10.0, radius=5.0,
+              first_seen_ts=0.0, last_seen_ts=0.0)
+    state, score = lid_state(np.zeros((40, 40, 3), np.uint8), t)
+    assert state == "lid"
+
+    monkeypatch.setattr("pipeline.features.lid_score",
+                        lambda *a, **k: DETECTION.lid_score_threshold - 1)
+    assert lid_state(np.zeros((40, 40, 3), np.uint8), t)[0] == "open"
+
+
+def test_track_label_is_three_digits():
+    from tools.track_regions import track_label
+
+    assert track_label(1) == "001"
+    assert track_label(42) == "042"
+    assert track_label(999) == "999"
+    # past 999 it keeps counting rather than wrapping onto a live id
+    assert track_label(1000) == "1000"
+
+
 def test_create_localizer_knows_crucible_but_auto_is_unchanged():
     from pipeline.localize import CrucibleLocalizer, create_localizer
 

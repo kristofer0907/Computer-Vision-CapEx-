@@ -386,6 +386,16 @@ class DetectionConfig:
     enabled: tuple[str, ...] = ("turbidity", "solgel", "color_change",
                                 "spill", "vial_presence")
 
+    # pipeline.features.lid_score() at or above this reads as a lid.
+    # UNLIKE the rest of this dataclass this one IS calibrated: swept against
+    # the 225 hand-labelled crucibles in data/lid_review.json (tools/
+    # review_lids.py), where it scores 96.4% - every one of the 120 lids
+    # caught, 8 of 105 open jars wrongly called lidded. The classes do
+    # overlap (open runs 40-1107, lid 627-1087), so a single frame's verdict
+    # is worth doubting; a crucible that flips between frames is the case to
+    # expect, not a surprise.
+    lid_score_threshold: float = 585.0
+
     # Size of the square crop taken around each tracked centroid, as a
     # multiple of the vial radius. 2.0 would be exactly the rim; the margin
     # keeps the rim and a little bench either side inside the crop.

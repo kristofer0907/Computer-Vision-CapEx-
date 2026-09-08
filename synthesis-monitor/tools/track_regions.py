@@ -1,8 +1,20 @@
-"""Run SlotTracker/FifoTracker/RegionCoordinator over real captures, headless.
+"""Run SlotTracker/FifoTracker/RegionCoordinator over captures, headless.
+
+Replay a folder:
 
     python -m tools.track_regions --images capture/second_iteration/crucibles/undistored
     python -m tools.track_regions --images capture/second_iteration/clean --undistort
-    python -m tools.track_regions --images ... --frames 40 --out data/region_tracks.json
+
+Or capture live, in the spirit of capture/capture_images.py - every
+--interval seconds, annotated, into a folder of your choosing, until ctrl-c:
+
+    python -m tools.track_regions --live --interval 30 --overlay-dir runs/monday
+    python -m tools.track_regions --live picamera2 --interval 10 --overlay-dir runs/x
+
+Each crucible is drawn with its id (001-999), the zone and slot it is in,
+and a colour for whether it looks lidded - see DETECTION.lid_score_threshold
+for how far to trust that (96.4% against the hand-labelled set, and the
+classes do overlap).
 
 Standalone validation for pipeline/region_trackers.py, same spirit as
 tools/replay.py but without a PipelineRunner: no dashboard, no storage, no
@@ -34,12 +46,13 @@ import dataclasses
 import json
 import logging
 import sys
+import time
 from pathlib import Path
 
 import cv2
 import numpy as np
 
-from config import DATA_DIR, ensure_dirs
+from config import DATA_DIR, DETECTION, ensure_dirs
 from pipeline.region_trackers import (FifoTracker, RegionCoordinator, SlotTracker,
                                       create_region_coordinator)
 
@@ -51,17 +64,30 @@ OUT_DIR = DATA_DIR / "inspect_regions"
 BASE_BGR = (90, 110, 130)
 SLOT_BGR = (98, 170, 235)
 LANE_BGR = (201, 134, 31)
-CONTINUING_BGR = (110, 199, 98)
-FRESH_BGR = (60, 168, 224)
 HANDOFF_BGR = (230, 210, 70)
 CLOSED_BGR = (82, 82, 224)
 
+# Lid state is what colours a crucible, since that is the thing being read
+# off these frames. Track state (just appeared / just handed off) is a ring
+# outside the disc instead, so the two never compete for the same channel.
+LID_BGR = (110, 199, 98)        # green - lid detected
+OPEN_BGR = (60, 168, 224)       # amber - open jar
+UNKNOWN_BGR = (150, 150, 150)   # grey - could not be scored
 
-def grab(images_dir: str, undistort: bool):
-    """Yield Frames from a folder, optionally undistorted (see module docstring)."""
-    from drivers.rgb_cam import FileCameraSource
 
-    source = FileCameraSource(images_dir, loop=False)
+def grab(images_dir: str | None, undistort: bool, rgb: str | None = None,
+         interval_s: float = 0.0):
+    """Yield Frames, either replaying a folder or capturing live.
+
+    A folder ends when it runs out. A live source runs until interrupted -
+    that is the point of it - so the caller decides when to stop.
+    """
+    from drivers.rgb_cam import FileCameraSource, create_camera
+
+    if images_dir:
+        source = FileCameraSource(images_dir, loop=False)
+    else:
+        source = create_camera(rgb)
     source.start()
     try:
         while True:
@@ -73,6 +99,8 @@ def grab(images_dir: str, undistort: bool):
                 from tools.mark_slots import undistort_image
                 frame = dataclasses.replace(frame, image=undistort_image(frame.image))
             yield frame
+            if interval_s:
+                time.sleep(interval_s)
     finally:
         source.stop()
 
@@ -105,6 +133,28 @@ def _text(out: np.ndarray, s: str, org: tuple[int, int], color, scale: float,
                 thick + 2, cv2.LINE_AA)
     cv2.putText(out, s, org, cv2.FONT_HERSHEY_SIMPLEX, scale, color,
                 thick, cv2.LINE_AA)
+
+
+def track_label(track_id: int) -> str:
+    """Ids read as 001-999. Past 999 it keeps counting rather than wrapping -
+    a reused id would silently merge two crucibles' histories."""
+    return f"{track_id:03d}"
+
+
+def lid_state(image: np.ndarray, t) -> tuple[str, float | None]:
+    """("lid" | "open" | "unknown", score) for one tracked crucible.
+
+    Scored per frame off the current image rather than carried on the Track:
+    a lid can be put on or taken off between frames, so it is an observation,
+    not an identity. See DETECTION.lid_score_threshold for how reliable this
+    is - the classes overlap, so single-frame verdicts do flip.
+    """
+    from pipeline.features import lid_score
+    try:
+        score = lid_score(image, t.cx, t.cy, t.radius)
+    except Exception:
+        return "unknown", None
+    return ("lid" if score >= DETECTION.lid_score_threshold else "open"), score
 
 
 def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
@@ -141,11 +191,16 @@ def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
         queue = (coord.trackers[zone].queue_order()
                  if isinstance(coord.trackers[zone], FifoTracker) else [])
         for t in active:
-            color = (HANDOFF_BGR if t.track_id in handed_off
-                     else FRESH_BGR if t.hits == 1 else CONTINUING_BGR)
+            state, _score = lid_state(image, t)
+            color = {"lid": LID_BGR, "open": OPEN_BGR}.get(state, UNKNOWN_BGR)
             c = (int(round(t.cx)), int(round(t.cy)))
             r = int(round(t.radius))
             cv2.circle(out, c, r, color, thick, cv2.LINE_AA)
+            if t.track_id in handed_off:
+                # just arrived from another zone - a ring outside the disc,
+                # so it does not fight the lid colour
+                cv2.circle(out, c, r + int(round(9 * scale)), HANDOFF_BGR,
+                           max(1, thick - 1), cv2.LINE_AA)
 
             # The id goes inside the disc and the zone just under it: slots
             # sit ~140 px apart, so a wide label above each one collides with
@@ -156,7 +211,7 @@ def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
                 where = f"{zone[:4]} q{queue.index(t.track_id) + 1}"
             else:
                 where = zone[:4]
-            _text(out, str(t.track_id), c, color, scale * 0.62, thick,
+            _text(out, track_label(t.track_id), c, color, scale * 0.62, thick,
                   center=True)
             _text(out, where, (c[0], c[1] + r + int(round(26 * scale))),
                   color, scale * 0.46, max(1, thick - 1), center=True)
@@ -165,24 +220,48 @@ def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
             c = (int(round(t.cx)), int(round(t.cy)))
             cv2.drawMarker(out, c, CLOSED_BGR, cv2.MARKER_TILTED_CROSS,
                            28, thick)
-            _text(out, f"ID {t.track_id} {t.closed_reason}",
+            _text(out, f"{track_label(t.track_id)} {t.closed_reason}",
                   (c[0] + 16, c[1] + 8), CLOSED_BGR, scale * 0.72,
                   max(1, thick - 1))
 
+    _legend(out, scale, thick)
     return out
 
 
-def as_json(name: str, results: dict, coord: RegionCoordinator) -> dict:
+def _legend(out: np.ndarray, scale: float, thick: int) -> None:
+    """What the colours mean, on the frame itself - these get looked at
+    days later, away from the terminal that produced them."""
+    x, y = int(round(24 * scale)), int(round(40 * scale))
+    step = int(round(34 * scale))
+    for color, text in ((LID_BGR, "lid detected"),
+                        (OPEN_BGR, "open"),
+                        (UNKNOWN_BGR, "not scored"),
+                        (HANDOFF_BGR, "outer ring: changed zone"),
+                        (CLOSED_BGR, "x: track ended")):
+        cv2.circle(out, (x, y - int(round(6 * scale))),
+                   int(round(9 * scale)), color, -1, cv2.LINE_AA)
+        _text(out, text, (x + int(round(22 * scale)), y), color,
+              scale * 0.46, max(1, thick - 1))
+        y += step
+
+
+def as_json(name: str, results: dict, coord: RegionCoordinator,
+            image: np.ndarray) -> dict:
     zones = {}
     for zone, (active, _closed) in results.items():
         tracker = coord.trackers[zone]
         queue_pos = ({tid: i for i, tid in enumerate(tracker.queue_order())}
                     if isinstance(tracker, FifoTracker) else {})
-        zones[zone] = [
-            {"track_id": t.track_id, "slot_id": t.slot_id, "cx": t.cx, "cy": t.cy,
-             "stage": t.stage, "queue_pos": queue_pos.get(t.track_id)}
-            for t in active
-        ]
+        entries = []
+        for t in active:
+            state, score = lid_state(image, t)
+            entries.append(
+                {"track_id": t.track_id, "label": track_label(t.track_id),
+                 "slot_id": t.slot_id, "cx": t.cx, "cy": t.cy,
+                 "stage": t.stage, "queue_pos": queue_pos.get(t.track_id),
+                 "lid": state,
+                 "lid_score": None if score is None else round(score, 1)})
+        zones[zone] = entries
     return {
         "frame": name,
         "zones": zones,
@@ -197,14 +276,23 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--images", required=True, help="folder of captures")
+    src = p.add_mutually_exclusive_group(required=True)
+    src.add_argument("--images", help="replay a folder of captures")
+    src.add_argument("--live", metavar="BACKEND", nargs="?", const="auto",
+                     help="capture from the camera instead: auto | picamera2 | mock")
+    p.add_argument("--interval", type=float, default=10.0,
+                   help="seconds between live captures (default: 10)")
     p.add_argument("--undistort", action="store_true",
                    help="undistort each frame first (see module docstring)")
     p.add_argument("--localizer", default="crucible",
                    help="where crucibles come from (default: detect_crucibles)")
-    p.add_argument("--frames", type=int, default=None, help="cap frames processed")
-    p.add_argument("--out", default=str(OUT_JSON))
-    p.add_argument("--overlay-dir", default=str(OUT_DIR))
+    p.add_argument("--frames", type=int, default=None,
+                   help="stop after this many frames (default: unlimited when "
+                        "live, whole folder when replaying)")
+    p.add_argument("--out", default=None,
+                   help="tracks JSON (default: <overlay-dir>/region_tracks.json)")
+    p.add_argument("--overlay-dir", default=str(OUT_DIR),
+                   help="folder to save the annotated frames into")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
 
@@ -213,17 +301,23 @@ def main(argv: list[str] | None = None) -> int:
     ensure_dirs()
     overlay_dir = Path(args.overlay_dir)
     overlay_dir.mkdir(parents=True, exist_ok=True)
+    out_path = Path(args.out) if args.out else overlay_dir / "region_tracks.json"
 
     from pipeline.localize import create_localizer
 
     localizer = create_localizer(args.localizer)
     localizer.start()
 
+    if args.live:
+        log.info("live capture from %r every %.1fs -> %s   (ctrl-c to stop)",
+                 args.live, args.interval, overlay_dir)
+
     coord: RegionCoordinator | None = None
     dumped: list[dict] = []
     n = 0
     try:
-        for frame in grab(args.images, args.undistort):
+        for frame in grab(args.images, args.undistort, rgb=args.live,
+                          interval_s=args.interval if args.live else 0.0):
             if args.frames is not None and n >= args.frames:
                 break
             if coord is None:
@@ -240,25 +334,28 @@ def main(argv: list[str] | None = None) -> int:
             detections = localizer.locate(frame)
             results = coord.update(detections, frame.timestamp)
 
-            name = str((frame.truth or {}).get("name", "") or f"frame_{frame.frame_id}")
+            name = str((frame.truth or {}).get("name", "")
+                       or time.strftime("%Y%m%d_%H%M%S"))
             log.info(summarize(coord, results, n))
-            dumped.append(as_json(name, results, coord))
+            dumped.append(as_json(name, results, coord, frame.image))
 
             overlay = draw_overlay(frame.image, coord, results)
-            cv2.imwrite(str(overlay_dir / f"{n:03d}_{Path(name).stem}.jpg"), overlay)
+            cv2.imwrite(str(overlay_dir / f"{n:04d}_{Path(name).stem}.jpg"), overlay)
+            # Written every frame, not just at the end: a live run is stopped
+            # with ctrl-c, and losing the whole record to that would be daft.
+            out_path.write_text(json.dumps(dumped, indent=2))
             n += 1
+    except KeyboardInterrupt:
+        log.info("stopped")
     finally:
         localizer.stop()
 
     if n == 0:
-        log.error("no images processed")
+        log.error("no frames processed")
         return 1
 
-    out_path = Path(args.out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(dumped, indent=2))
-    log.info("wrote %d frame(s) of tracks to %s", n, out_path)
-    log.info("wrote overlays to %s", overlay_dir)
+    log.info("wrote %d frame(s): overlays in %s, tracks in %s",
+             n, overlay_dir, out_path)
     return 0
 
 

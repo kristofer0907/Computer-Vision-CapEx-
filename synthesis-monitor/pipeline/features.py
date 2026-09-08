@@ -155,7 +155,15 @@ def detect_crucibles(img: np.ndarray, min_r: int = 50, max_r: int = 100,
     gray0 = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     out = _hough_pass(gray0, min_r, max_r, param1, param2, min_dist, min_mean)
 
+    # The ROI is in full-capture pixels. On a smaller frame - a downscaled
+    # preview, the mock platform - the slice comes back empty and every cv2
+    # call below it throws, so skip the pass rather than crash: it is a
+    # recheck of one known-awkward jar, not something the result depends on.
+    h, w = gray0.shape
     x0, y0, x1, y1 = _SECOND_PASS_ROI
+    if x1 > w or y1 > h:
+        return out
+
     roi_hits = _hough_pass(gray0[y0:y1, x0:x1], min_r=60, max_r=max_r,
                             param1=param1, param2=35, min_dist=min_dist,
                             min_mean=100.0)
