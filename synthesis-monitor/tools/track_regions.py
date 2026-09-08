@@ -5,10 +5,15 @@ Replay a folder:
     python -m tools.track_regions --images capture/second_iteration/crucibles/undistored
     python -m tools.track_regions --images capture/second_iteration/clean --undistort
 
-Or capture live, in the spirit of capture/capture_images.py - every
---interval seconds, annotated, into a folder of your choosing, until ctrl-c:
+Or capture live. Like capture/capture_images.py it asks where to put the
+images and how far apart to take them, then runs until ctrl-c:
 
-    python -m tools.track_regions --live --interval 30 --overlay-dir runs/monday
+    python -m tools.track_regions --live
+        Folder name to save images to: runs/monday
+        Interval between photos (seconds): 30
+
+Pass either as a flag to skip that question, for scripting:
+
     python -m tools.track_regions --live picamera2 --interval 10 --overlay-dir runs/x
 
 Each crucible is drawn with its id (001-999), the zone and slot it is in,
@@ -280,8 +285,8 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--images", help="replay a folder of captures")
     src.add_argument("--live", metavar="BACKEND", nargs="?", const="auto",
                      help="capture from the camera instead: auto | picamera2 | mock")
-    p.add_argument("--interval", type=float, default=10.0,
-                   help="seconds between live captures (default: 10)")
+    p.add_argument("--interval", type=float, default=None,
+                   help="seconds between live captures; asked for if omitted")
     und = p.add_mutually_exclusive_group()
     und.add_argument("--undistort", action="store_true", default=None,
                      help="lens-correct each frame before tracking. On by "
@@ -297,8 +302,9 @@ def main(argv: list[str] | None = None) -> int:
                         "live, whole folder when replaying)")
     p.add_argument("--out", default=None,
                    help="tracks JSON (default: <overlay-dir>/region_tracks.json)")
-    p.add_argument("--overlay-dir", default=str(OUT_DIR),
-                   help="folder to save the annotated frames into")
+    p.add_argument("--overlay-dir", default=None,
+                   help="folder to save the annotated frames into; asked for "
+                        "if omitted on a live run")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
 
@@ -312,6 +318,33 @@ def main(argv: list[str] | None = None) -> int:
         args.undistort = bool(args.live)
 
     ensure_dirs()
+
+    # A live run asks for the folder and the interval the way
+    # capture/capture_images.py does, rather than making you remember flag
+    # names at the bench. Passing either flag skips its question, so this
+    # still scripts.
+    if args.live:
+        if args.overlay_dir is None:
+            args.overlay_dir = input("Folder name to save images to: ").strip()
+            while not args.overlay_dir:
+                args.overlay_dir = input("Folder name to save images to: ").strip()
+        if args.interval is None:
+            while True:
+                raw = input("Interval between photos (seconds): ").strip()
+                try:
+                    args.interval = float(raw)
+                except ValueError:
+                    print("  a number, please")
+                    continue
+                if args.interval < 0:
+                    print("  must not be negative")
+                    continue
+                break
+    if args.overlay_dir is None:
+        args.overlay_dir = str(OUT_DIR)
+    if args.interval is None:
+        args.interval = 10.0
+
     overlay_dir = Path(args.overlay_dir)
     overlay_dir.mkdir(parents=True, exist_ok=True)
     out_path = Path(args.out) if args.out else overlay_dir / "region_tracks.json"
@@ -324,8 +357,11 @@ def main(argv: list[str] | None = None) -> int:
     log.info("lens correction: %s",
              "on" if args.undistort else "off (frames assumed already undistorted)")
     if args.live:
-        log.info("live capture from %r every %.1fs -> %s   (ctrl-c to stop)",
-                 args.live, args.interval, overlay_dir)
+        # flush: logging goes to stderr, so an unflushed stdout banner turns
+        # up after the frames it was meant to introduce
+        print(f"\nCapturing to '{overlay_dir}' every {args.interval:g}s, "
+              f"with tracking overlays.", flush=True)
+        print("Press ctrl-c to stop.\n", flush=True)
 
     coord: RegionCoordinator | None = None
     dumped: list[dict] = []
