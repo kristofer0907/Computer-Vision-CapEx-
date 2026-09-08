@@ -14,13 +14,21 @@ import json
 import numpy as np
 import pytest
 
-from config import GEOMETRY
 from pipeline.region_trackers import (FifoTracker, RegionCoordinator, RegionTracker,
                                       SlotTracker)
 from pipeline.types import Detection
-from pipeline.zones import ZoneMap
+from pipeline.zones import ZoneMap, px_to_mm
 
-W, H = GEOMETRY.frame_width_px, GEOMETRY.frame_height_px
+# A fixed synthetic canvas, deliberately not GEOMETRY's frame size: these
+# tests are about tracker logic, and should not start failing because the
+# deployment switched capture resolution.
+W, H = 1280, 720
+
+# Gates are quoted in mm, which converts through GEOMETRY.px_per_mm - so
+# express them as "this many pixels on the test canvas" to stay independent
+# of that too.
+def gate_for(pixels: float) -> float:
+    return px_to_mm(pixels)
 
 
 def rect(x0, x1, y0=0.3, y1=0.7):
@@ -136,7 +144,7 @@ def test_fifo_tracker_orders_new_detections_by_lane_position(tmp_path):
 def test_fifo_tracker_identity_survives_movement(tmp_path):
     path = tmp_path / "lane.json"
     write_lane(path, entry=(280, 360), exit_=(480, 360))
-    tracker = FifoTracker("injection", (W, H), lane_path=path, step_gate_mm=200.0)
+    tracker = FifoTracker("injection", (W, H), lane_path=path, step_gate_mm=gate_for(80))
     tracker.start()
 
     tracker.update([det(300, 360)], 0.0)
@@ -150,7 +158,7 @@ def test_fifo_tracker_cannot_swap_order(tmp_path):
     """Two crucibles on the lane; the one nearer the entry never overtakes."""
     path = tmp_path / "lane.json"
     write_lane(path, entry=(280, 360), exit_=(480, 360))
-    tracker = FifoTracker("injection", (W, H), lane_path=path, step_gate_mm=200.0)
+    tracker = FifoTracker("injection", (W, H), lane_path=path, step_gate_mm=gate_for(80))
     tracker.start()
 
     tracker.update([det(300, 360), det(400, 360)], 0.0)
@@ -163,7 +171,7 @@ def test_fifo_tracker_exit_closes_as_advanced(tmp_path):
     path = tmp_path / "lane.json"
     write_lane(path, entry=(280, 360), exit_=(480, 360))
     tracker = FifoTracker("injection", (W, H), lane_path=path,
-                          max_missed_frames=0, step_gate_mm=200.0)
+                          max_missed_frames=0, step_gate_mm=gate_for(80))
     tracker.start()
 
     tracker.update([det(300, 360)], 0.0)
@@ -176,7 +184,8 @@ def test_fifo_tracker_exit_closes_as_advanced(tmp_path):
 def test_fifo_tracker_midlane_disappearance_is_lost(tmp_path):
     path = tmp_path / "lane.json"
     write_lane(path, entry=(280, 360), exit_=(480, 360))
-    tracker = FifoTracker("injection", (W, H), lane_path=path, max_missed_frames=0)
+    tracker = FifoTracker("injection", (W, H), lane_path=path, max_missed_frames=0,
+                          step_gate_mm=gate_for(40))
     tracker.start()
 
     tracker.update([det(300, 360)], 0.0)  # stays near entry, never advances
@@ -203,7 +212,7 @@ def test_coordinator_handoff_across_zone_boundary(tmp_path):
                           id_source=id_source)
     injection = FifoTracker("injection", (W, H), lane_path=lane_path,
                             id_source=id_source, max_missed_frames=0,
-                            step_gate_mm=250.0)
+                            step_gate_mm=gate_for(200))
     coord = RegionCoordinator(zone_map, {"storing": storing, "injection": injection},
                               region_sequence=("storing", "injection"))
     coord.start()

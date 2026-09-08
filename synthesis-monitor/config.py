@@ -42,8 +42,13 @@ class GeometryConfig:
     platform_length_mm: float = 780.0
     platform_width_mm: float = 260.0
     camera_height_mm: float = 800.0
-    frame_width_px: int = 1280
-    frame_height_px: int = 720
+    # Full sensor readout, matching data/camera_calibration.npz and every
+    # capture in capture/. Not a preview size: detect_crucibles' radius
+    # bounds, the lid score threshold and the hand-marked slot layouts are
+    # all calibrated at this resolution, and at half of it detection finds
+    # nothing at all (crucibles fall under min_r).
+    frame_width_px: int = 4056
+    frame_height_px: int = 3040
     horizontal_coverage_mm: float = 1021.0
     vial_diameter_mm: float = 27.0
     n_vials: int = 18
