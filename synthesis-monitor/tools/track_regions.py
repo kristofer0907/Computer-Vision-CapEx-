@@ -153,6 +153,16 @@ def slot_occupancy(coord: RegionCoordinator, zone: str) -> dict[int, bool]:
             for sid, occupant in tracker.slot_status().items()}
 
 
+def slot_positions(coord: RegionCoordinator, zone: str) -> dict[int, tuple[float, float]]:
+    """Where each occupied slot's crucible was actually detected, so lineage
+    can tell a replaced jar from the same one sitting still."""
+    tracker = coord.trackers.get(zone)
+    if not isinstance(tracker, SlotTracker):
+        return {}
+    return {t.slot_id: (t.cx, t.cy) for t in tracker.tracks
+            if t.slot_id is not None}
+
+
 def short_vial_id(vial_id: str | None) -> str:
     """`heater-0-1757339234` -> `h0.9234`, so it fits under a crucible."""
     if not vial_id:
@@ -434,7 +444,9 @@ def main(argv: list[str] | None = None) -> int:
             results = coord.update(detections, frame.timestamp)
             lineage.update(slot_occupancy(coord, REGION_TRACKING.heater_zone),
                            slot_occupancy(coord, REGION_TRACKING.cooling_zone),
-                           frame.timestamp)
+                           frame.timestamp,
+                           heater_pos=slot_positions(
+                               coord, REGION_TRACKING.heater_zone))
 
             name = str((frame.truth or {}).get("name", "")
                        or time.strftime("%Y%m%d_%H%M%S"))

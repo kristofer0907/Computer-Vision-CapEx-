@@ -343,6 +343,19 @@ class RegionTrackingConfig:
     heater_zone: str = "heating"
     cooling_zone: str = "collection"
 
+    # A heater slot that stays occupied but whose detection jumps further
+    # than this is treated as a different vial, not the same one wobbling.
+    # A swap between two captures never shows the slot empty, so occupancy
+    # alone cannot see it - but a replaced jar does not land back on the same
+    # pixels. Measured on capture/tracking_practice: an untouched jar moved
+    # 0.00-6.40 px between frames (identical on two pairs, mean 2.12), while
+    # the slot being worked moved 4.24-28.79 px, 14+ on four of five steps.
+    # 12 px sits above the detector's own noise on a static jar and below a
+    # typical replacement. The two ranges do overlap, so a slow careful swap
+    # can still pass as one vial - this narrows the blind spot rather than
+    # closing it.
+    heater_replacement_move_px: float = 12.0
+
     # Frames a slot may sit unmatched before its track is closed as vacated.
     slot_max_missed_frames: int = 2
 

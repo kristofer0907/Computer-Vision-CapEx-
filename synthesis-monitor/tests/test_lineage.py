@@ -19,7 +19,7 @@ def test_id_is_minted_when_a_heater_slot_fills():
     lin.update(occ(), occ(), 100.0)
     lin.update(occ(0), occ(), 130.0)
 
-    assert lin.vial_on_heater(0) == "heater-0-130"
+    assert lin.vial_on_heater(0) == "heater-0-130000"
     assert lin.vial_on_heater(1) is None
 
 
@@ -89,7 +89,7 @@ def test_a_replaced_vial_gets_a_new_id():
     second = lin.vial_on_heater(0)
 
     assert second != first
-    assert second == "heater-0-160"
+    assert second == "heater-0-160000"
 
 
 def test_most_recent_vacate_is_the_one_claimed():
@@ -137,8 +137,8 @@ def test_as_dict_round_trips_the_state():
     lin.update(occ(), occ(1), 130.0)
     d = lin.as_dict()
 
-    assert d["on_cooling"] == {1: "heater-0-100"}
-    assert d["records"][0]["vial_id"] == "heater-0-100"
+    assert d["on_cooling"] == {1: "heater-0-100000"}
+    assert d["records"][0]["vial_id"] == "heater-0-100000"
     assert d["pending_vacates"] == []
 
 
@@ -166,4 +166,72 @@ def test_an_unlinked_slot_can_still_be_claimed_after_it_empties():
     lin.update(occ(), occ(1), 220.0)           # same pad slot, now explained
 
     assert len(lin.warnings) == 1
-    assert lin.vial_on_cooling(1) == "heater-0-160"
+    assert lin.vial_on_cooling(1) == "heater-0-160000"
+
+
+# --------------------------------------------------------------------------
+# Replacement spotted by movement, not by the slot emptying
+# --------------------------------------------------------------------------
+def test_a_static_jar_keeps_its_id_through_detector_jitter():
+    """Real numbers from capture/tracking_practice slot 0, an untouched jar:
+    it repeats exact pixels and never moves more than 6.4 px."""
+    lin = VialLineage()
+    track = [(2017.5, 2503.5), (2017.5, 2503.5), (2017.5, 2502.5),
+             (2016.5, 2500.5), (2021.5, 2504.5), (2019.5, 2506.5),
+             (2020.5, 2502.5), (2022.5, 2503.5), (2022.5, 2503.5)]
+    for i, pos in enumerate(track):
+        lin.update(occ(0), occ(), 100.0 + 30 * i, heater_pos={0: pos})
+
+    assert lin.vial_on_heater(0) == "heater-0-100000"
+    assert lin.records == []
+    assert lin.pending_vacates == []
+
+
+def test_a_jump_while_still_occupied_is_read_as_a_replacement():
+    """Slot 1's real steps: 28.3, 28.8, 4.2, 14.0, 15.0 px, occupancy True
+    throughout. Occupancy alone sees one vial; the jumps say otherwise."""
+    lin = VialLineage()
+    lin.update(occ(0), occ(), 100.0, heater_pos={0: (1804.5, 2459.5)})
+    first = lin.vial_on_heater(0)
+
+    lin.update(occ(0), occ(), 130.0, heater_pos={0: (1800.5, 2431.5)})  # 28.3
+    second = lin.vial_on_heater(0)
+
+    assert second != first
+    assert lin.pending_vacates == [first]      # the old one is claimable
+
+
+def test_a_replacement_spotted_by_movement_still_reaches_the_cooling_pad():
+    lin = VialLineage()
+    lin.update(occ(0), occ(), 100.0, heater_pos={0: (1804.0, 2459.0)})
+    first = lin.vial_on_heater(0)
+    lin.update(occ(0), occ(), 130.0, heater_pos={0: (1830.0, 2459.0)})  # 26 px
+    lin.update(occ(0), occ(2), 160.0, heater_pos={0: (1830.0, 2459.0)})
+
+    assert lin.vial_on_cooling(2) == first
+    assert len(lin.records) == 1
+
+
+def test_movement_is_ignored_when_no_positions_are_given():
+    """Occupancy-only callers keep the original behaviour."""
+    lin = VialLineage()
+    lin.update(occ(0), occ(), 100.0)
+    first = lin.vial_on_heater(0)
+    lin.update(occ(0), occ(), 130.0)
+    assert lin.vial_on_heater(0) == first
+
+
+def test_two_vials_in_one_slot_within_a_second_get_distinct_ids():
+    """Replaying captures faster than they were taken put two vials in one
+    slot inside the same second. At second resolution their ids collided and
+    one id ended up linked to two different cooling slots."""
+    lin = VialLineage()
+    lin.update(occ(0), occ(), 100.10, heater_pos={0: (1800.0, 2400.0)})
+    first = lin.vial_on_heater(0)
+    lin.update(occ(0), occ(), 100.35, heater_pos={0: (1840.0, 2400.0)})
+    second = lin.vial_on_heater(0)
+
+    assert first != second
+    lin.update(occ(0), occ(1), 100.60, heater_pos={0: (1840.0, 2400.0)})
+    lin.update(occ(), occ(1, 2), 100.85, heater_pos={})
+    assert len({r.vial_id for r in lin.records}) == len(lin.records)

@@ -29,8 +29,11 @@ cadence faster than the swap, or something that tells the two jars apart.
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from typing import Any
+
+from config import REGION_TRACKING
 
 log = logging.getLogger(__name__)
 
@@ -79,6 +82,9 @@ class VialLineage:
     def __init__(self) -> None:
         #: heater slot -> (vial on it, when it arrived)
         self._on_heater: dict[int, tuple[str, float]] = {}
+        #: heater slot -> where its vial was last detected, for spotting a
+        #: swap that never leaves the slot reading empty
+        self._heater_pos: dict[int, tuple[float, float]] = {}
         #: cooling slots reading full, whether or not a vial is known for
         #: them - occupancy is what edges are computed from, and it has to be
         #: recorded even when the fill could not be linked, or the same slot
@@ -106,21 +112,45 @@ class VialLineage:
 
     # -------------------------------------------------------------- update
     def update(self, heater_occupied: dict[int, bool],
-               cooling_occupied: dict[int, bool], timestamp: float) -> None:
+               cooling_occupied: dict[int, bool], timestamp: float,
+               heater_pos: dict[int, tuple[float, float]] | None = None) -> None:
         """Absorb one frame's occupancy.
 
         Heater edges are processed before cooling edges, so a vial that
         leaves a heater and lands on the pad within one frame interval is
         still matched - at this cadence that is the normal case, not a race.
+
+        `heater_pos` is optional: where each occupied heater slot's vial was
+        detected. Given it, a slot whose detection jumps by more than
+        REGION_TRACKING.heater_replacement_move_px is read as a swap - the
+        vial that was there vacates and a new one arrives - which occupancy
+        on its own cannot see.
         """
-        self._heater_edges(heater_occupied, timestamp)
+        self._heater_edges(heater_occupied, timestamp, heater_pos or {})
         self._cooling_edges(cooling_occupied, timestamp)
 
-    def _heater_edges(self, occupied: dict[int, bool], timestamp: float) -> None:
+    def _heater_edges(self, occupied: dict[int, bool], timestamp: float,
+                      positions: dict[int, tuple[float, float]]) -> None:
         for slot, is_occupied in sorted(occupied.items()):
             was_occupied = slot in self._on_heater
+
+            if is_occupied and was_occupied and slot in positions:
+                moved = self._moved(slot, positions[slot])
+                if moved is not None and moved > REGION_TRACKING.heater_replacement_move_px:
+                    old_id, entry_ts = self._on_heater.pop(slot)
+                    self._pending.append(
+                        _Vacate(old_id, slot, entry_ts, timestamp))
+                    log.info("heater slot %d: detection moved %.1f px - reading "
+                             "that as %s being replaced", slot, moved, old_id)
+                    was_occupied = False        # fall through and mint a new one
+
             if is_occupied and not was_occupied:
-                vial_id = f"heater-{slot}-{int(timestamp)}"
+                # Millisecond resolution, not seconds: two vials can occupy
+                # the same slot inside one second when replaying captures
+                # faster than they were taken, and second-resolution ids then
+                # collide - two different vials sharing one id, each linked to
+                # a different cooling slot.
+                vial_id = f"heater-{slot}-{int(timestamp * 1000)}"
                 self._on_heater[slot] = (vial_id, timestamp)
                 log.info("heater slot %d: %s arrived", slot, vial_id)
             elif was_occupied and not is_occupied:
@@ -128,6 +158,17 @@ class VialLineage:
                 self._pending.append(_Vacate(vial_id, slot, entry_ts, timestamp))
                 log.info("heater slot %d: %s left, awaiting a cooling slot",
                          slot, vial_id)
+
+            if is_occupied and slot in positions:
+                self._heater_pos[slot] = positions[slot]
+            elif not is_occupied:
+                self._heater_pos.pop(slot, None)
+
+    def _moved(self, slot: int, now: tuple[float, float]) -> float | None:
+        was = self._heater_pos.get(slot)
+        if was is None:
+            return None
+        return math.hypot(now[0] - was[0], now[1] - was[1])
 
     def _cooling_edges(self, occupied: dict[int, bool], timestamp: float) -> None:
         for slot, is_occupied in sorted(occupied.items()):
