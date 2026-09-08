@@ -11,10 +11,12 @@ from __future__ import annotations
 import itertools
 import json
 
+import numpy as np
 import pytest
 
 from config import GEOMETRY
-from pipeline.region_trackers import FifoTracker, RegionCoordinator, SlotTracker
+from pipeline.region_trackers import (FifoTracker, RegionCoordinator, RegionTracker,
+                                      SlotTracker)
 from pipeline.types import Detection
 from pipeline.zones import ZoneMap
 
@@ -249,6 +251,45 @@ def test_coordinator_does_not_hand_off_between_non_adjacent_zones(tmp_path):
     assert coord.handoffs_this_frame() == []
 
 
+def test_coordinator_does_not_bridge_a_skipped_zone(tmp_path):
+    """A crucible whose whole transit through the middle zone falls between
+    two frames gets a fresh id, not the donor's.
+
+    This is a known, accepted limitation of keying handoffs on immediate
+    neighbours in the process order: at a slow cadence a crucible can enter
+    and leave `injection` entirely unobserved, and nothing in the frames
+    then connects the storing track to the collection one. Locked in as a
+    test so the behaviour is deliberate rather than discovered later.
+    """
+    slots_a = tmp_path / "slots_storing.json"
+    write_slots(slots_a, [(80, 300)])
+    slots_b = tmp_path / "slots_collection.json"
+    write_slots(slots_b, [(900, 300)])
+
+    zone_map = ZoneMap(W, H, {
+        "storing": rect(0.00, 0.20),
+        "injection": rect(0.20, 0.40),
+        "collection": rect(0.60, 0.80),
+    })
+    id_source = itertools.count(1)
+    storing = SlotTracker("storing", (W, H), slots_path=slots_a,
+                          id_source=id_source, max_missed_frames=0)
+    collection = SlotTracker("collection", (W, H), slots_path=slots_b,
+                             id_source=id_source)
+    coord = RegionCoordinator(
+        zone_map, {"storing": storing, "collection": collection},
+        region_sequence=("storing", "injection", "collection"))
+    coord.start()
+
+    coord.update([det(80, 300)], 0.0)                  # storing: id 1
+    # next frame: gone from storing, already sitting in collection - the
+    # injection leg was never observed.
+    results = coord.update([det(900, 300)], 10.0)
+    collection_tracks, _ = results["collection"]
+    assert collection_tracks[0].track_id != 1
+    assert coord.handoffs_this_frame() == []
+
+
 def test_coordinator_reslot_within_same_zone_keeps_identity(tmp_path):
     slots_path = tmp_path / "slots.json"
     write_slots(slots_path, [(80, 300), (180, 300)])
@@ -266,3 +307,179 @@ def test_coordinator_reslot_within_same_zone_keeps_identity(tmp_path):
     assert tracks[0].track_id == 1
     assert tracks[0].slot_id == 1
     assert coord.handoffs_this_frame() == [(1, "storing", "storing")]
+
+
+def test_coordinator_reset_clears_every_zone(tmp_path):
+    slots_path = tmp_path / "slots.json"
+    write_slots(slots_path, [(80, 300)])
+    zone_map = ZoneMap(W, H, {"storing": rect(0.00, 0.30)})
+    storing = SlotTracker("storing", (W, H), slots_path=slots_path)
+    coord = RegionCoordinator(zone_map, {"storing": storing},
+                              region_sequence=("storing",))
+    coord.start()
+
+    coord.update([det(80, 300)], 0.0)
+    assert coord.tracks
+    coord.reset()
+    assert not coord.tracks
+    assert coord.handoffs_this_frame() == []
+
+
+# --------------------------------------------------------------------------
+# RegionTracker - the Tracker-ABC adapter the pipeline drives
+# --------------------------------------------------------------------------
+def _two_zone_tracker(tmp_path):
+    slots_path = tmp_path / "slots_storing.json"
+    write_slots(slots_path, [(80, 300), (180, 300)])
+    lane_path = tmp_path / "lane_injection.json"
+    write_lane(lane_path, entry=(400, 360), exit_=(600, 360))
+
+    zone_map = ZoneMap(W, H, {
+        "storing": rect(0.00, 0.20),
+        "injection": rect(0.20, 0.60),
+    })
+    id_source = itertools.count(1)
+    trackers = {
+        "storing": SlotTracker("storing", (W, H), slots_path=slots_path,
+                               id_source=id_source),
+        "injection": FifoTracker("injection", (W, H), lane_path=lane_path,
+                                 id_source=id_source),
+    }
+    coord = RegionCoordinator(zone_map, trackers,
+                              region_sequence=("storing", "injection"))
+    return RegionTracker(coordinator=coord)
+
+
+def test_region_tracker_flattens_zones_to_the_tracker_interface(tmp_path):
+    tracker = _two_zone_tracker(tmp_path)
+    tracker.start()
+
+    active, closed = tracker.update([det(80, 300), det(420, 360)], 0.0)
+    assert isinstance(active, list) and isinstance(closed, list)
+    assert len(active) == 2                      # one per zone, flattened
+    assert {t.stage for t in active} == {"storing", "injection"}
+    assert not closed
+    assert len(tracker.tracks) == 2
+
+
+def test_region_tracker_reset_clears_state(tmp_path):
+    tracker = _two_zone_tracker(tmp_path)
+    tracker.start()
+    tracker.update([det(80, 300)], 0.0)
+    assert tracker.tracks
+    tracker.reset()
+    assert not tracker.tracks
+
+
+def test_region_tracker_is_usable_as_a_tracker(tmp_path):
+    """The pipeline only ever touches the ABC surface - pin that down."""
+    from pipeline.tracking import Tracker
+
+    tracker = _two_zone_tracker(tmp_path)
+    assert isinstance(tracker, Tracker)
+    tracker.start()
+    result = tracker.update([], 0.0)
+    assert isinstance(result, tuple) and len(result) == 2
+
+
+def test_region_tracker_does_not_report_a_handoff_as_closed(tmp_path):
+    """A crucible moving zones must not look like a disappearance.
+
+    pipeline/runner.py fires a closure event and calls history.forget() on
+    everything in the closed list, so leaking handoff donors into it would
+    drop the crucible's feature history and raise a false alarm on every
+    normal zone transition.
+    """
+    slots_path = tmp_path / "slots_storing.json"
+    write_slots(slots_path, [(80, 300)])
+    lane_path = tmp_path / "lane_injection.json"
+    write_lane(lane_path, entry=(400, 360), exit_=(600, 360))
+
+    zone_map = ZoneMap(W, H, {
+        "storing": rect(0.00, 0.20),
+        "injection": rect(0.20, 0.60),
+    })
+    id_source = itertools.count(1)
+    trackers = {
+        "storing": SlotTracker("storing", (W, H), slots_path=slots_path,
+                               id_source=id_source, max_missed_frames=0),
+        "injection": FifoTracker("injection", (W, H), lane_path=lane_path,
+                                 id_source=id_source),
+    }
+    coord = RegionCoordinator(zone_map, trackers,
+                              region_sequence=("storing", "injection"))
+    tracker = RegionTracker(coordinator=coord)
+    tracker.start()
+
+    tracker.update([det(80, 300)], 0.0)                    # storing: id 1
+    active, closed = tracker.update([det(420, 360)], 10.0)  # moved to injection
+
+    assert coord.handoffs_this_frame() == [(1, "storing", "injection")]
+    assert not closed                       # the donor is not a disappearance
+    assert [t.track_id for t in active] == [1]
+    assert active[0].stage == "injection"
+
+
+def test_region_tracker_still_reports_a_real_disappearance(tmp_path):
+    """The inverse of the above - a genuine loss must still surface."""
+    slots_path = tmp_path / "slots.json"
+    write_slots(slots_path, [(80, 300)])
+    zone_map = ZoneMap(W, H, {"storing": rect(0.00, 0.30)})
+    coord = RegionCoordinator(
+        zone_map,
+        {"storing": SlotTracker("storing", (W, H), slots_path=slots_path,
+                                max_missed_frames=0)},
+        region_sequence=("storing",))
+    tracker = RegionTracker(coordinator=coord)
+    tracker.start()
+
+    tracker.update([det(80, 300)], 0.0)
+    active, closed = tracker.update([], 10.0)      # nothing anywhere
+    assert not active
+    assert [t.closed_reason for t in closed] == ["vacated"]
+
+
+def test_create_tracker_auto_is_still_hungarian():
+    """Default behaviour must not change for anything that did not opt in."""
+    from pipeline.tracking import HungarianTracker, create_tracker
+
+    assert isinstance(create_tracker("auto"), HungarianTracker)
+    assert isinstance(create_tracker(), HungarianTracker)
+
+
+def test_create_tracker_rejects_an_unknown_name():
+    from pipeline.tracking import create_tracker
+
+    with pytest.raises(ValueError, match="unknown tracker"):
+        create_tracker("nonsense")
+
+
+# --------------------------------------------------------------------------
+# CrucibleLocalizer
+# --------------------------------------------------------------------------
+def test_crucible_localizer_wraps_detect_crucibles(monkeypatch):
+    """It is a thin adapter: circles in, Detections out, no identity."""
+    import pipeline.features
+    from drivers.base import Frame
+    from pipeline.localize import CrucibleLocalizer
+
+    monkeypatch.setattr(pipeline.features, "detect_crucibles",
+                        lambda img, **kw: [(100.0, 200.0, 60.0), (300.0, 400.0, 55.0)])
+
+    frame = Frame(image=np.zeros((H, W, 3), np.uint8), timestamp=0.0,
+                  frame_id=1, source="test")
+    loc = CrucibleLocalizer()
+    loc.start()
+    dets = loc.locate(frame)
+
+    assert [(d.cx, d.cy, d.radius) for d in dets] == [
+        (100.0, 200.0, 60.0), (300.0, 400.0, 55.0)]
+    assert all(d.meta["detector"] == "hough_crucible" for d in dets)
+    assert loc.real_capable
+
+
+def test_create_localizer_knows_crucible_but_auto_is_unchanged():
+    from pipeline.localize import CrucibleLocalizer, create_localizer
+
+    assert isinstance(create_localizer("crucible"), CrucibleLocalizer)
+    assert not isinstance(create_localizer("auto"), CrucibleLocalizer)

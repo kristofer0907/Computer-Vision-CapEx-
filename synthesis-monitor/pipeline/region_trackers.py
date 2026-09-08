@@ -38,7 +38,7 @@ from pathlib import Path
 
 import numpy as np
 
-from config import DATA_DIR, REGION_TRACKING
+from config import DATA_DIR, GEOMETRY, REGION_TRACKING
 from pipeline.assignment import assign_with_gate
 from pipeline.tracking import Tracker
 from pipeline.types import Detection, Track
@@ -455,3 +455,88 @@ class RegionCoordinator:
 
     def handoffs_this_frame(self) -> list[tuple[int, str, str]]:
         return list(self._last_handoffs)
+
+    def reset(self) -> None:
+        """Forget everything, in every zone. Used when a run ends or restarts."""
+        for tracker in self.trackers.values():
+            tracker.reset()
+        self._recently_closed.clear()
+        self._prev_active_ids = {z: set() for z in self.trackers}
+        self._last_handoffs = []
+
+
+def create_region_coordinator(frame_size: tuple[int, int] | None = None,
+                              zone_map: ZoneMap | None = None) -> RegionCoordinator:
+    """One tracker per configured zone, all sharing one id source.
+
+    frame_size defaults to the configured geometry, the same assumption
+    ZoneMap already makes when constructed with no size. Slot and lane
+    layouts rescale themselves to it if they were marked on a differently
+    sized image.
+    """
+    if frame_size is None:
+        frame_size = (GEOMETRY.frame_width_px, GEOMETRY.frame_height_px)
+    zm = zone_map or ZoneMap(frame_size[0], frame_size[1])
+
+    id_source = itertools.count(1)
+    trackers: dict[str, Tracker] = {}
+    for zone in REGION_TRACKING.region_sequence:
+        if zone in REGION_TRACKING.slot_files:
+            trackers[zone] = SlotTracker(zone, frame_size, id_source=id_source)
+        elif zone in REGION_TRACKING.lane_files:
+            trackers[zone] = FifoTracker(zone, frame_size, id_source=id_source)
+    return RegionCoordinator(zm, trackers)
+
+
+class RegionTracker(Tracker):
+    """Tracker-ABC adapter over RegionCoordinator.
+
+    RegionCoordinator deliberately is not a Tracker: its update() returns
+    per-zone results, which is what tools/track_regions.py needs to draw
+    overlays and report slot occupancy. The pipeline (pipeline/runner.py)
+    wants the flat (active, closed) pair every Tracker returns, so this
+    flattens it, and leaves `.coordinator` reachable for anything that wants
+    the zone-level detail back.
+    """
+
+    def __init__(self, coordinator: RegionCoordinator | None = None,
+                 frame_size: tuple[int, int] | None = None,
+                 zone_map: ZoneMap | None = None) -> None:
+        self.coordinator = coordinator or create_region_coordinator(
+            frame_size, zone_map)
+
+    def start(self) -> None:
+        self.coordinator.start()
+
+    def reset(self) -> None:
+        self.coordinator.reset()
+
+    @property
+    def tracks(self) -> list[Track]:
+        return self.coordinator.tracks
+
+    def update(self, detections: list[Detection], timestamp: float
+               ) -> tuple[list[Track], list[Track]]:
+        results = self.coordinator.update(detections, timestamp)
+
+        # A track whose id was handed to a spawn in another zone did not end -
+        # the same crucible is still on the bench under that id, one zone
+        # along. Reporting it as closed would make the pipeline fire a
+        # disappearance event and drop the id's feature history
+        # (pipeline/runner.py calls history.forget() on everything closed)
+        # every single time a crucible moved between zones.
+        handed_off = {tid for tid, _from, _to in self.coordinator.handoffs_this_frame()}
+
+        active: list[Track] = []
+        closed: list[Track] = []
+        seen: set[int] = set()
+        for zone_active, zone_closed in results.values():
+            for t in zone_active:
+                if t.track_id not in seen:
+                    seen.add(t.track_id)
+                    active.append(t)
+            closed.extend(t for t in zone_closed if t.track_id not in handed_off)
+        return active, closed
+
+    def handoffs_this_frame(self) -> list[tuple[int, str, str]]:
+        return self.coordinator.handoffs_this_frame()

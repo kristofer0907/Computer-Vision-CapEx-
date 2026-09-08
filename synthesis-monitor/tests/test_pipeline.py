@@ -416,3 +416,86 @@ def test_file_source_reports_which_file_a_frame_came_from(tmp_path):
     finally:
         source.stop()
     assert names == ["shot_0.png", "shot_1.png"]
+
+
+def test_runner_starts_a_tracker_that_needs_starting():
+    """A tracker that loads something from disk must get its start() called.
+
+    The Tracker ABC has no start() - HungarianTracker sets up in __init__ -
+    so PipelineRunner did not call one. The region trackers read their
+    hand-marked layouts in start(), and without this they load nothing,
+    match nothing, and report an empty platform with no error anywhere.
+    """
+    from pipeline.tracking import Tracker
+
+    class StartCountingTracker(Tracker):
+        def __init__(self):
+            self.starts = 0
+
+        def start(self):
+            self.starts += 1
+
+        def update(self, detections, timestamp):
+            return [], []
+
+        def reset(self):
+            pass
+
+        @property
+        def tracks(self):
+            return []
+
+    tracker = StartCountingTracker()
+    runner = PipelineRunner(localizer=NullLocalizer(),
+                            extractor=NullFeatureExtractor(),
+                            tracker=tracker, draw_overlay=False)
+    runner.start()
+    try:
+        assert tracker.starts == 1
+        runner.start()                      # idempotent, must not start twice
+        assert tracker.starts == 1
+    finally:
+        runner.stop()
+
+
+def test_runner_still_accepts_a_tracker_with_no_start():
+    """HungarianTracker has no start() - the hook must stay optional."""
+    from pipeline.tracking import HungarianTracker
+
+    runner = PipelineRunner(localizer=NullLocalizer(),
+                            extractor=NullFeatureExtractor(),
+                            tracker=HungarianTracker(), draw_overlay=False)
+    runner.start()
+    runner.stop()
+
+
+def test_normal_region_exits_are_info_not_warnings():
+    """A crucible leaving a slot, or reaching the lane's exit, is the process
+    working - not a disappearance.
+
+    pipeline/region_trackers.py closes a track on every such exit. Before
+    runner.py knew those reasons, each one raised a "track_lost" warning, so
+    a normal run would have been wall-to-wall false alarms.
+    """
+    from pipeline.types import Track
+
+    runner = PipelineRunner(localizer=NullLocalizer(),
+                            extractor=NullFeatureExtractor(),
+                            draw_overlay=False)
+
+    def closed(reason: str, tid: int) -> Track:
+        t = Track(track_id=tid, cx=10.0, cy=10.0, radius=5.0,
+                  first_seen_ts=0.0, last_seen_ts=1.0, stage="storing")
+        t.closed_reason = reason
+        return t
+
+    events = runner._closure_events(
+        [closed("vacated", 1), closed("advanced", 2),
+         closed("lost", 3), closed("oven", 4)],
+        frame_id=1, now=2.0)
+
+    by_id = {e.track_id: e for e in events}
+    assert (by_id[1].kind, by_id[1].severity) == ("track_ended", "info")
+    assert (by_id[2].kind, by_id[2].severity) == ("track_ended", "info")
+    assert (by_id[3].kind, by_id[3].severity) == ("track_lost", "warning")
+    assert (by_id[4].kind, by_id[4].severity) == ("oven_entry_inferred", "info")

@@ -200,3 +200,29 @@ class CadenceController:
         self._prev.clear()
         self._quiet_frames = 0
         self.busy = False
+
+
+def create_tracker(name: str = "auto", frame_size: tuple[int, int] | None = None,
+                   zone_map: ZoneMap | None = None) -> Tracker:
+    """Build a tracker by name, mirroring pipeline.localize.create_localizer.
+
+    "auto" stays HungarianTracker: the vial-flow model is what the simulator
+    and every existing test drive, and changing that silently would swap the
+    behaviour of every caller that did not ask for it.
+
+    "region" is the real-hardware crucible layout - per-zone slot matching
+    plus a FIFO lane, with identity handed across zone boundaries. It needs
+    the hand-marked slot and lane files (see tools/mark_slots.py) and will
+    raise FileNotFoundError at start() without them.
+    """
+    key = (name or "auto").lower()
+    if key in ("auto", "hungarian", "vial"):
+        return HungarianTracker(zone_map)
+    if key in ("region", "crucible", "zones"):
+        # Imported here, not at module level: pipeline.region_trackers imports
+        # this module for the Tracker ABC, so a top-level import would be
+        # circular.
+        from pipeline.region_trackers import RegionTracker
+        return RegionTracker(frame_size=frame_size, zone_map=zone_map)
+    raise ValueError(
+        f"unknown tracker {name!r}. Implement it in pipeline/ and register it here.")

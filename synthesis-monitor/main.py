@@ -52,6 +52,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                       help="localiser to use; see pipeline/localize.py")
     pipe.add_argument("--extractor", default="auto",
                       help="feature extractor; see pipeline/features.py")
+    pipe.add_argument("--tracker", default="auto",
+                      help="auto (vial-flow Hungarian) | region (per-zone "
+                           "crucible slot + FIFO lane tracking; needs the "
+                           "hand-marked layouts from tools/mark_slots.py)")
     pipe.add_argument("--no-pipeline", action="store_true",
                       help="preview and thermal only, no analysis")
 
@@ -103,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
         thermal_backend=args.thermal,
         localizer=args.localizer,
         extractor=args.extractor,
+        tracker=args.tracker,
         enable_thermal=not args.no_thermal,
         enable_pipeline=not args.no_pipeline,
         persist=not args.no_persist,

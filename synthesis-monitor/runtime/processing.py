@@ -35,7 +35,7 @@ def processing_worker(analysis_q: mp.Queue, result_q: mp.Queue,
                       status_q: mp.Queue, stop: mp.Event,
                       analysis_interval: mp.Value, run_id: int | None = None,
                       localizer: str = "auto", extractor: str = "auto",
-                      draw_overlay: bool = True) -> None:
+                      tracker: str = "auto", draw_overlay: bool = True) -> None:
     """Entry point for the processing process. Returns when `stop` is set."""
     logging.basicConfig(
         level=logging.INFO,
@@ -43,14 +43,19 @@ def processing_worker(analysis_q: mp.Queue, result_q: mp.Queue,
 
     from pipeline.features import create_extractor
     from pipeline.localize import create_localizer
+    from pipeline.tracking import create_tracker
     from storage.db import Database   # per-process connection
 
     status = WorkerStatus(worker="processing", source="pipeline")
 
     try:
+        # Frame size is left to the configured geometry here, unlike
+        # tools/replay.py which takes it from the source: the live camera is
+        # opened at GEOMETRY's dimensions, so the two already agree.
         runner = PipelineRunner(
             localizer=create_localizer(localizer),
             extractor=create_extractor(extractor),
+            tracker=create_tracker(tracker),
             draw_overlay=draw_overlay,
         )
         runner.start()

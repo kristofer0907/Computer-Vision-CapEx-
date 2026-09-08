@@ -32,6 +32,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--frames", type=int, default=20, help="frames to analyse")
     p.add_argument("--localizer", default="auto")
     p.add_argument("--extractor", default="auto")
+    p.add_argument("--tracker", default="auto",
+                   help="auto (vial-flow Hungarian) | region (per-zone crucible "
+                        "slot + FIFO lane tracking, needs the hand-marked "
+                        "layouts from tools/mark_slots.py)")
     p.add_argument("--interval", type=float, default=0.0,
                    help="seconds to wait between frames (0 = as fast as possible)")
     p.add_argument("--persist", action="store_true",
@@ -50,10 +54,25 @@ def main(argv: list[str] | None = None) -> int:
     from pipeline.features import create_extractor
     from pipeline.localize import create_localizer
     from pipeline.runner import PipelineRunner
+    from pipeline.tracking import create_tracker
+    from pipeline.zones import ZoneMap
 
     camera = create_camera(args.rgb)
+
+    # Zone polygons resolve to pixels against one frame size, and the region
+    # trackers' slot/lane layouts rescale to it too, so take a frame before
+    # building anything that depends on it rather than trusting the geometry
+    # in config to match whatever this source actually produces. The frame is
+    # not wasted - it is the first one processed below.
+    first_frame = camera.capture()
+    h, w = first_frame.image.shape[:2]
+    zone_map = ZoneMap(w, h)
+
     runner = PipelineRunner(localizer=create_localizer(args.localizer),
                             extractor=create_extractor(args.extractor),
+                            tracker=create_tracker(args.tracker, frame_size=(w, h),
+                                                   zone_map=zone_map),
+                            zone_map=zone_map,
                             draw_overlay=False)
     runner.start()
 
@@ -70,11 +89,14 @@ def main(argv: list[str] | None = None) -> int:
     began = time.monotonic()
     try:
         for i in range(args.frames):
-            try:
-                frame = camera.capture()
-            except StopIteration:
-                log.info("source exhausted after %d frames", i)
-                break
+            if first_frame is not None:
+                frame, first_frame = first_frame, None
+            else:
+                try:
+                    frame = camera.capture()
+                except StopIteration:
+                    log.info("source exhausted after %d frames", i)
+                    break
 
             result = runner.process(frame)
             total_events += len(result.events)

@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
-import itertools
 import json
 import logging
 import sys
@@ -40,9 +39,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from config import DATA_DIR, REGION_TRACKING, ensure_dirs
-from pipeline.region_trackers import FifoTracker, RegionCoordinator, SlotTracker
-from pipeline.zones import ZoneMap
+from config import DATA_DIR, ensure_dirs
+from pipeline.region_trackers import (FifoTracker, RegionCoordinator, SlotTracker,
+                                      create_region_coordinator)
 
 log = logging.getLogger("track_regions")
 
@@ -79,15 +78,7 @@ def grab(images_dir: str, undistort: bool):
 
 
 def build_coordinator(frame_size: tuple[int, int]) -> RegionCoordinator:
-    zone_map = ZoneMap(frame_size[0], frame_size[1])
-    id_source = itertools.count(1)
-    trackers: dict = {}
-    for zone in REGION_TRACKING.region_sequence:
-        if zone in REGION_TRACKING.slot_files:
-            trackers[zone] = SlotTracker(zone, frame_size, id_source=id_source)
-        elif zone in REGION_TRACKING.lane_files:
-            trackers[zone] = FifoTracker(zone, frame_size, id_source=id_source)
-    return RegionCoordinator(zone_map, trackers)
+    return create_region_coordinator(frame_size)
 
 
 def summarize(coord: RegionCoordinator, results: dict, frame_idx: int) -> str:

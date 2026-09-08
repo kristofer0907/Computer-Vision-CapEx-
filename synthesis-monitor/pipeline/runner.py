@@ -44,6 +44,13 @@ SEVERITY_BGR = {
 TRACK_BGR = (110, 199, 98)
 UNCONFIRMED_BGR = (120, 120, 120)
 
+# closed_reason values that mean a track ended normally, and how to say so.
+# "oven" is handled separately - it is an inference, not an observation.
+NORMAL_EXIT_REASONS = {
+    "advanced": "left the lane at its exit end",
+    "vacated": "was lifted out of its slot",
+}
+
 
 class _Timer:
     """Accumulates per-stage wall time so a slow stage is visible, not guessed."""
@@ -91,6 +98,14 @@ class PipelineRunner:
         self.localizer.start()
         self.extractor.start()
         self.detectors.start()
+        # The Tracker ABC has no start(): HungarianTracker does all its setup
+        # in __init__. A tracker that loads something from disk (the region
+        # trackers read their hand-marked slot and lane layouts) needs the
+        # hook, and without it fails silently - no layout loaded means no
+        # detection ever matches and the pipeline reports an empty platform.
+        tracker_start = getattr(self.tracker, "start", None)
+        if tracker_start is not None:
+            tracker_start()
         self._started = True
         log.info("pipeline started: localizer=%s extractor=%s detectors=%s",
                  self.localizer.name, self.extractor.name,
@@ -304,6 +319,21 @@ class PipelineRunner:
                     detector="tracker", zone=t.stage,
                     data={"last_stage": t.stage, "age_s": round(t.age_s, 1),
                           "inferred": True},
+                ))
+            elif t.closed_reason in NORMAL_EXIT_REASONS:
+                # Region tracking (pipeline/region_trackers.py) ends a track
+                # every time a crucible leaves a slot or reaches the end of
+                # the lane. Those are the process working, not a failure -
+                # only an unexplained disappearance is worth a warning.
+                out.append(Event(
+                    kind="track_ended", severity="info",
+                    message=(f"{t.track_id} "
+                             f"{NORMAL_EXIT_REASONS[t.closed_reason]} "
+                             f"in {t.stage or 'an unstaged position'}"),
+                    timestamp=now, frame_id=frame_id, track_id=t.track_id,
+                    detector="tracker", zone=t.stage,
+                    data={"last_stage": t.stage, "age_s": round(t.age_s, 1),
+                          "reason": t.closed_reason},
                 ))
             else:
                 out.append(Event(

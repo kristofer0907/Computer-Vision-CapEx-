@@ -42,6 +42,7 @@ class Supervisor:
     def __init__(self, rgb_backend: str | None = None,
                  thermal_backend: str | None = None,
                  localizer: str = "auto", extractor: str = "auto",
+                 tracker: str = "auto",
                  enable_thermal: bool = True, enable_pipeline: bool = True,
                  persist: bool = True, store_thermal_grid: bool = False,
                  note: str | None = None) -> None:
@@ -49,6 +50,7 @@ class Supervisor:
         self.thermal_backend = thermal_backend
         self.localizer = localizer
         self.extractor = extractor
+        self.tracker = tracker
         self.enable_thermal = enable_thermal
         self.enable_pipeline = enable_pipeline
         self.persist = persist
@@ -97,7 +99,7 @@ class Supervisor:
                 target=processing_worker, name="processing",
                 args=(self.analysis_q, self.result_q, self.status_q,
                       self.stop_event, self.analysis_interval, self.run_id,
-                      self.localizer, self.extractor),
+                      self.localizer, self.extractor, self.tracker),
                 daemon=True)
 
         if self.enable_thermal:
