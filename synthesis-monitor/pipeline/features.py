@@ -174,28 +174,49 @@ def detect_crucibles(img: np.ndarray, min_r: int = 50, max_r: int = 100,
     return out
 
 
-def lid_score(img: np.ndarray, cx: float, cy: float, r: float,
-              frac: float = 0.55) -> float:
-    """Local contrast (Laplacian variance) in the central `frac` of a crucible.
+def lid_score(img: np.ndarray, cx: float, cy: float, r: float | None = None,
+              half_px: float | None = None) -> float:
+    """Mean gradient magnitude in a fixed window on a crucible's centre.
 
     A lid breaks up the smooth open-jar interior whether it reads bright
-    (metal jars) or dark (glass) - contrast catches both, brightness alone
-    didn't. Threshold calibrated against data/lid_review.json.
+    (metal jars) or dark (glass), so an edge measure catches both where
+    brightness alone did not.
+
+    The window is a fixed number of pixels rather than a fraction of `r`.
+    Hough's radius wanders - 60 to 78 px across the labelled set for jars of
+    one size - and scaling the window with it means a jar that happened to
+    measure large gets more of its own smooth rim averaged in and scores
+    lower for it. That is what put one lidded crucible at 578 against a 585
+    threshold while its identical neighbours sat at 799-955.
+
+    `r` is accepted and ignored, so existing callers keep working.
+
+    Measured on data/lid_review.json (225 hand labels): 99.1%, 98.7% under
+    5-fold cross-validation, against 96.4% for the Laplacian-variance version
+    this replaces. Lids run 56.0-82.7, open jars 4.8-67.7 - still overlapping,
+    but the two remaining errors are both open jars read as lidded, and every
+    lid is caught.
     """
+    half_px = LID_WINDOW_PX if half_px is None else half_px
     h, w = img.shape[:2]
-    rr = r * frac
-    x0, y0 = max(int(cx - rr), 0), max(int(cy - rr), 0)
-    x1, y1 = min(int(cx + rr), w), min(int(cy + rr), h)
+    x0, y0 = max(int(cx - half_px), 0), max(int(cy - half_px), 0)
+    x1, y1 = min(int(cx + half_px), w), min(int(cy + half_px), h)
     crop = cv2.cvtColor(img[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.float32)
     if crop.size == 0:
         return 0.0
-    return float(cv2.Laplacian(crop, cv2.CV_32F, ksize=3).var())
+    gx = cv2.Sobel(crop, cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(crop, cv2.CV_32F, 0, 1, ksize=3)
+    return float(np.mean(np.hypot(gx, gy)))
 
 
-# Tuned on data/lid_review.json (225 labels): 8 misses, all open->lid, from
-# glare in one tray slot plus a flush glass disc. Fix with a better feature,
-# not by nudging this number.
-LID_SCORE_THRESHOLD = 585.0
+# Half-width of the window lid_score() samples, in pixels. Swept over the
+# labelled set: 18, 20 and 22 px all score 98.7% cross-validated, so this
+# sits in the middle of a plateau rather than on a peak.
+LID_WINDOW_PX = 20.0
+
+# Tuned on data/lid_review.json (225 labels): 2 misses, both open->lid.
+# Fix with a better feature, not by nudging this number.
+LID_SCORE_THRESHOLD = 55.7
 
 
 def has_lid(img: np.ndarray, cx: float, cy: float, r: float,

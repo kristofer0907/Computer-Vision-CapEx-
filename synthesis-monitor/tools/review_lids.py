@@ -4,9 +4,8 @@
 
 Why this exists: pipeline/features.py:lid_score() measures local contrast in
 the middle of a detected crucible, and across the reviewed crucible set it
-separates cleanly outside a score band of roughly 300-650 - but nothing
-confirms which side of "has a lid" that band actually falls on, because
-nobody has said which jars are really lidded. This walks every detection,
+separates cleanly outside a score band of roughly 45-68. High means lidded,
+settled by the labels already in data/lid_review.json. This walks every detection,
 pre-labels the obvious ones from the score so only real judgment calls need
 a click, and reports whether a clean score threshold exists once you're done.
 
@@ -16,7 +15,7 @@ Controls:
     s               save and quit
     q / ESC         quit without saving
 
-Circles with a dashed dark ring are in the ambiguous score band (300-650)
+Circles with a dashed dark ring are in the ambiguous score band (45-68)
 and were only guessed at - look at those first.
 
 Output, keyed by filename:
@@ -50,7 +49,7 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 
 LID_BGR = (90, 220, 90)
 OPEN_BGR = (220, 150, 60)
-UNCERTAIN_BAND = (300.0, 650.0)  # lid_score()'s own fuzzy band - see its docstring
+UNCERTAIN_BAND = (45.0, 68.0)  # where lid and open overlap - see lid_score()
 
 
 def guess_label(score: float) -> str:
