@@ -384,16 +384,21 @@ class RegionCoordinator:
                 start()
 
     def _neighbors(self, zone: str) -> list[str]:
-        """Zones one step away from `zone` in the fixed process order."""
-        if zone not in self.region_sequence:
-            return []
-        i = self.region_sequence.index(zone)
-        out = []
-        if i > 0:
-            out.append(self.region_sequence[i - 1])
-        if i < len(self.region_sequence) - 1:
-            out.append(self.region_sequence[i + 1])
-        return out
+        """Zones a track in `zone` may have come from.
+
+        Any of them. The arm lifts a crucible and puts it down wherever it
+        is going - it does not walk it along the process order - so storing
+        to collection in one move is normal, not a skipped step. Restricting
+        this to adjacent entries in region_sequence meant a crucible taken
+        out of storing and set down in heating could never inherit its id,
+        and a six-crucible run ended up numbering into the teens.
+
+        region_sequence therefore says which zones exist and in what order to
+        report them, not what moves are allowed. What actually constrains a
+        handoff is that a track has to have closed, recently
+        (handoff_window_s), for a spawn to claim its id at all.
+        """
+        return [z for z in self.region_sequence if z != zone]
 
     def update(self, detections: list[Detection], timestamp: float
                ) -> dict[str, tuple[list[Track], list[Track]]]:
