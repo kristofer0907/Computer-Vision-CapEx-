@@ -294,11 +294,16 @@ class RegionTrackingConfig:
     hand-marked entry/exit axis (tools/mark_slots.py --lane).
     """
 
-    # zone name -> slot JSON filename under DATA_DIR. Not slots_<zone>.json
-    # because the files predate this naming and were produced one at a time
-    # by tools/mark_slots.py --stage filling.
+    # zone name -> slot JSON filename under DATA_DIR. heating/collection
+    # predate the slots_<zone>.json naming and were produced one at a time
+    # by tools/mark_slots.py --stage filling. storing was re-derived by
+    # clustering real detect_crucibles() output across a full capture batch
+    # (see data/slots_storing.json's "note" field) - the original
+    # hand-marked slots_filling_beginning.json was off by 40-77px per hole,
+    # consistent per hole but not a single global offset, which meant
+    # something closer to a re-mark than a translation fix.
     slot_files: dict[str, str] = field(default_factory=lambda: {
-        "storing": "slots_filling_beginning.json",
+        "storing": "slots_storing.json",
         "heating": "slots_filling_heaters.json",
         "collection": "slots_filling_end_zone.json",
     })
