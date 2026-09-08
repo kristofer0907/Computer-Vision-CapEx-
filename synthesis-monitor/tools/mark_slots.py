@@ -7,12 +7,12 @@ a calibration shot), save them as a reference JSON.
     python -m tools.mark_slots --stage injection --lane
 
 By default this undistorts the first image in
-capture/second_iteration/calibration_imgs/ (using the saved calibration at
-data/camera_calibration.npz) and uses that as the reference frame, since that
-image happens to have the crucible slot rack in frame. Pass --source-image to
-use a different photo instead. Either way the undistorted frame is saved once
-to data/reference_images/<stage>_reference.jpg, and re-used on future runs of
-the same --stage unless --source-image forces a fresh one.
+capture/second_iteration/clean/ (using the saved calibration at
+data/camera_calibration.npz) and uses that as the reference frame. Pass
+--source-image to use a different photo instead. Either way the undistorted
+frame is saved once to data/reference_images/<stage>_reference.jpg, and
+re-used on future runs of the same --stage unless --source-image forces a
+fresh one.
 
 Controls:
     left click      place a slot at the cursor
@@ -21,6 +21,10 @@ Controls:
     c               clear all slots on this image
     s               save and quit
     q / ESC         quit without saving
+
+--radius is optional. If you never set one (neither --radius nor +/- during
+the session), the output simply omits "slot_radius_px" instead of writing a
+guessed default.
 
 Output (data/slots_<stage>.json by default):
 
@@ -70,14 +74,15 @@ import cv2
 import numpy as np
 
 from config import DATA_DIR, ensure_dirs
-from tools.calibrate_camera import CALIBRATION_FILE, DEFAULT_IMAGES_DIR
+from tools.calibrate_camera import CALIBRATION_FILE
 
 log = logging.getLogger("mark_slots")
 
 WINDOW = "mark slots - click to place, s save, q quit"
 SLOT_BGR = (98, 170, 235)
 REFERENCE_DIR = DATA_DIR / "reference_images"
-DEFAULT_RADIUS_PX = 22.0
+DEFAULT_IMAGES_DIR = Path("capture/second_iteration/clean")
+FALLBACK_DISPLAY_RADIUS_PX = 22.0  # only used to render circles when no radius was set
 
 
 def undistort_image(img: np.ndarray) -> np.ndarray:
@@ -120,9 +125,11 @@ def build_reference(stage: str, source_image: str | None, force: bool) -> Path:
 
 
 class SlotMarker:
-    def __init__(self, image: np.ndarray, radius: float, lane: bool = False) -> None:
+    def __init__(self, image: np.ndarray, radius: float, radius_set: bool,
+                 lane: bool = False) -> None:
         self.image = image
         self.radius = radius
+        self.radius_set = radius_set
         self.lane = lane
         self.points: list[tuple[float, float]] = []
 
@@ -158,7 +165,8 @@ class SlotMarker:
                       f"[left click entry then exit, right click to remove, "
                       f"c clear, s save, q quit]")
         else:
-            banner = (f"{len(self.points)} slots   r={self.radius:.0f}px   "
+            radius_label = f"r={self.radius:.0f}px" if self.radius_set else "r=unset"
+            banner = (f"{len(self.points)} slots   {radius_label}   "
                       f"[+/- radius, c clear, s save, q quit]")
         cv2.rectangle(out, (0, 0), (out.shape[1], 28), (20, 22, 26), -1)
         cv2.putText(out, banner, (8, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.55,
@@ -181,8 +189,10 @@ def _edit(marker: SlotMarker) -> str:
             return "save"
         if not marker.lane and key in (ord("+"), ord("=")):
             marker.radius += 1
+            marker.radius_set = True
         elif not marker.lane and key in (ord("-"), ord("_")):
             marker.radius = max(2.0, marker.radius - 1)
+            marker.radius_set = True
         elif key == ord("c"):
             marker.points.clear()
 
@@ -200,8 +210,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--force-reundistort", action="store_true",
                    help="re-undistort even if a reference image for this "
                         "stage already exists")
-    p.add_argument("--radius", type=float, default=DEFAULT_RADIUS_PX,
-                   help="starting slot radius in pixels (ignored with --lane)")
+    p.add_argument("--radius", type=float, default=None,
+                   help="slot radius in pixels; optional - if omitted (and "
+                        "never adjusted with +/-), the output has no "
+                        "slot_radius_px field. Ignored with --lane.")
     p.add_argument("--lane", action="store_true",
                    help="mark a 2-point entry/exit lane instead of N slots "
                         "(see pipeline.region_trackers.FifoTracker)")
@@ -218,7 +230,9 @@ def main(argv: list[str] | None = None) -> int:
     if image is None:
         raise SystemExit(f"could not read reference image {ref_path}")
 
-    marker = SlotMarker(image, args.radius, lane=args.lane)
+    radius_set = args.radius is not None
+    radius = args.radius if radius_set else FALLBACK_DISPLAY_RADIUS_PX
+    marker = SlotMarker(image, radius, radius_set, lane=args.lane)
     cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(WINDOW, min(1500, image.shape[1]), min(950, image.shape[0]))
     cv2.setMouseCallback(WINDOW, marker.on_mouse)
@@ -254,9 +268,10 @@ def main(argv: list[str] | None = None) -> int:
             "stage": args.stage,
             "image": ref_path.name,
             "image_size": [image.shape[1], image.shape[0]],
-            "slot_radius_px": round(marker.radius, 1),
-            "slots": marker.slots(),
         }
+        if marker.radius_set:
+            result["slot_radius_px"] = round(marker.radius, 1)
+        result["slots"] = marker.slots()
         default_out = DATA_DIR / f"slots_{args.stage}.json"
 
     out_path = Path(args.out) if args.out else default_out
