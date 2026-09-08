@@ -58,6 +58,7 @@ import cv2
 import numpy as np
 
 from config import DATA_DIR, DETECTION, REGION_TRACKING, ensure_dirs
+from pipeline.anomaly import MissingLid
 from pipeline.handoff import HeaterHandoff
 from pipeline.lineage import VialLineage
 from pipeline.region_trackers import (FifoTracker, RegionCoordinator, SlotTracker,
@@ -435,6 +436,8 @@ def main(argv: list[str] | None = None) -> int:
 
     lineage = VialLineage()
     handoff = HeaterHandoff(REGION_TRACKING.handoff_heater_slot)
+    missing_lid = MissingLid()
+    alerts: list[dict] = []
     coord: RegionCoordinator | None = None
     dumped: list[dict] = []
     n = 0
@@ -461,6 +464,14 @@ def main(argv: list[str] | None = None) -> int:
                            frame.timestamp,
                            heater_pos=slot_positions(
                                coord, REGION_TRACKING.heater_zone))
+            for e in missing_lid.check(
+                    frame.image,
+                    slot_positions(coord, REGION_TRACKING.heater_zone),
+                    frame.timestamp, frame.frame_id):
+                log.error("%s", e.message)
+                alerts.append({"frame": n, "kind": e.kind,
+                               "severity": e.severity, "message": e.message,
+                               **e.data})
             heat_occ = slot_occupancy(coord, REGION_TRACKING.heater_zone)
             handoff.update(
                 heat_occ.get(REGION_TRACKING.handoff_heater_slot, False),
@@ -472,6 +483,7 @@ def main(argv: list[str] | None = None) -> int:
             log.info(summarize(coord, results, n))
             record = as_json(name, results, coord, frame.image, lineage)
             record["handoff"] = handoff.as_dict()
+            record["alerts"] = [a for a in alerts if a["frame"] == n]
             dumped.append(record)
 
             overlay = draw_overlay(frame.image, coord, results, lineage, handoff)
