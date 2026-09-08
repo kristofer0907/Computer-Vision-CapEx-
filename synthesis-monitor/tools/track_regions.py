@@ -58,6 +58,7 @@ import cv2
 import numpy as np
 
 from config import DATA_DIR, DETECTION, REGION_TRACKING, ensure_dirs
+from pipeline.handoff import HeaterHandoff
 from pipeline.lineage import VialLineage
 from pipeline.region_trackers import (FifoTracker, RegionCoordinator, SlotTracker,
                                       create_region_coordinator)
@@ -164,14 +165,11 @@ def slot_positions(coord: RegionCoordinator, zone: str) -> dict[int, tuple[float
 
 
 def short_vial_id(vial_id: str | None) -> str:
-    """`heater-0-1757339234` -> `h0.9234`, so it fits under a crucible."""
+    """Trim an id to something that fits under a crucible: the last four
+    digits of its timestamp, which are unique enough to follow by eye."""
     if not vial_id:
         return ""
-    try:
-        _, slot, ts = vial_id.split("-")
-        return f"h{slot}.{ts[-4:]}"
-    except ValueError:
-        return vial_id
+    return f"#{vial_id.rsplit('-', 1)[-1][-4:]}"
 
 
 def track_label(track_id: int) -> str:
@@ -197,7 +195,8 @@ def lid_state(image: np.ndarray, t) -> tuple[str, float | None]:
 
 
 def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
-                 results: dict, lineage: VialLineage | None = None) -> np.ndarray:
+                 results: dict, lineage: VialLineage | None = None,
+                 handoff: HeaterHandoff | None = None) -> np.ndarray:
     out = coord.zone_map.draw(image, color=BASE_BGR)
     handed_off = {tid for tid, _from, _to in coord.handoffs_this_frame()}
 
@@ -258,7 +257,13 @@ def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
             # sit ~140 px apart, so a wide label above each one collides with
             # its neighbour's.
             vial_id = None
-            if lineage is not None and t.slot_id is not None:
+            if handoff is not None and t.slot_id is not None:
+                if (zone == REGION_TRACKING.heater_zone
+                        and t.slot_id == handoff.heater_slot):
+                    vial_id = handoff.held_id
+                elif zone == REGION_TRACKING.cooling_zone:
+                    vial_id = handoff.storage_ids.get(t.slot_id)
+            if vial_id is None and lineage is not None and t.slot_id is not None:
                 if zone == REGION_TRACKING.heater_zone:
                     vial_id = lineage.vial_on_heater(t.slot_id)
                 elif zone == REGION_TRACKING.cooling_zone:
@@ -421,6 +426,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Press ctrl-c to stop.\n", flush=True)
 
     lineage = VialLineage()
+    handoff = HeaterHandoff(REGION_TRACKING.handoff_heater_slot)
     coord: RegionCoordinator | None = None
     dumped: list[dict] = []
     n = 0
@@ -447,13 +453,20 @@ def main(argv: list[str] | None = None) -> int:
                            frame.timestamp,
                            heater_pos=slot_positions(
                                coord, REGION_TRACKING.heater_zone))
+            heat_occ = slot_occupancy(coord, REGION_TRACKING.heater_zone)
+            handoff.update(
+                heat_occ.get(REGION_TRACKING.handoff_heater_slot, False),
+                slot_occupancy(coord, REGION_TRACKING.cooling_zone),
+                frame.timestamp)
 
             name = str((frame.truth or {}).get("name", "")
                        or time.strftime("%Y%m%d_%H%M%S"))
             log.info(summarize(coord, results, n))
-            dumped.append(as_json(name, results, coord, frame.image, lineage))
+            record = as_json(name, results, coord, frame.image, lineage)
+            record["handoff"] = handoff.as_dict()
+            dumped.append(record)
 
-            overlay = draw_overlay(frame.image, coord, results, lineage)
+            overlay = draw_overlay(frame.image, coord, results, lineage, handoff)
             cv2.imwrite(str(overlay_dir / f"{n:04d}_{Path(name).stem}.jpg"), overlay)
             # Written every frame, not just at the end: a live run is stopped
             # with ctrl-c, and losing the whole record to that would be daft.

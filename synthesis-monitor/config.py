@@ -343,6 +343,11 @@ class RegionTrackingConfig:
     heater_zone: str = "heating"
     cooling_zone: str = "collection"
 
+    # Only this heater slot is watched by pipeline/handoff.py. Slot 1 is the
+    # left pad, the one the arm actually cycles; slot 0 sits untouched for a
+    # whole run and is deliberately ignored.
+    handoff_heater_slot: int = 1
+
     # A heater slot that stays occupied but whose detection jumps further
     # than this is treated as a different vial, not the same one wobbling.
     # A swap between two captures never shows the slot empty, so occupancy
