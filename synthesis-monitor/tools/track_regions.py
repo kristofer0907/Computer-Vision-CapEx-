@@ -492,6 +492,20 @@ def main(argv: list[str] | None = None) -> int:
             # with ctrl-c, and losing the whole record to that would be daft.
             out_path.write_text(json.dumps(dumped, indent=2))
             n += 1
+
+            if missing_lid.stop_requested:
+                # The frame that triggered this is already written, so the
+                # evidence is on disk before anything unwinds.
+                print("\n" + "=" * 68, flush=True)
+                print("  STOPPED: a crucible is on a heater without a lid.",
+                      flush=True)
+                for slot, ev in sorted(missing_lid.open_slots.items()):
+                    print(f"  heater slot {slot}: {ev.message}", flush=True)
+                print(f"  last frame written: {overlay_dir}", flush=True)
+                print("  This halts monitoring only - it does not stop the "
+                      "platform.", flush=True)
+                print("=" * 68 + "\n", flush=True)
+                break
     except KeyboardInterrupt:
         log.info("stopped")
     finally:

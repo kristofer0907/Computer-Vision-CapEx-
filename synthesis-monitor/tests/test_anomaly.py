@@ -47,20 +47,83 @@ def test_a_lidded_crucible_raises_nothing(scored):
     assert MissingLid().check(FRAME, {1: (10.0, 10.0)}, 100.0) == []
 
 
-def test_it_fires_once_on_arrival_not_every_frame(scored):
+def test_it_raises_once_and_then_holds_the_flag(scored):
     scored[(10.0, 10.0)] = OPEN
     m = MissingLid()
     first = m.check(FRAME, {1: (10.0, 10.0)}, 100.0)
     later = [m.check(FRAME, {1: (10.0, 10.0)}, 100.0 + 30 * i) for i in range(1, 4)]
 
     assert len(first) == 1
-    assert all(e == [] for e in later)
+    assert all(e == [] for e in later)     # one event, not one per frame
+    assert 1 in m.open_slots               # but the hazard is still flagged
+
+
+def test_an_unlidded_crucible_requests_a_stop(scored):
+    scored[(10.0, 10.0)] = OPEN
+    m = MissingLid()
+    assert not m.stop_requested
+    m.check(FRAME, {1: (10.0, 10.0)}, 100.0)
+    assert m.stop_requested
+    assert m.open_slots[1].data["stop_requested"] is True
+
+
+def test_a_lidded_crucible_does_not_request_a_stop(scored):
+    scored[(10.0, 10.0)] = LID
+    m = MissingLid()
+    m.check(FRAME, {1: (10.0, 10.0)}, 100.0)
+    assert not m.stop_requested
+    assert m.open_slots == {}
+
+
+def test_nothing_is_scored_once_stopped(scored):
+    """Deliberate: an open crucible on a live heater is not a condition to
+    keep measuring through."""
+    calls = []
+    scored[(10.0, 10.0)] = OPEN
+    scored[(50.0, 50.0)] = LID
+    m = MissingLid()
+    m.check(FRAME, {1: (10.0, 10.0)}, 100.0)
+    assert m.check(FRAME, {0: (50.0, 50.0)}, 130.0) == []
+    assert 0 not in m.open_slots
+
+
+def test_the_stop_hook_fires_once_with_the_event(scored):
+    seen = []
+    scored[(10.0, 10.0)] = OPEN
+    m = MissingLid(on_stop=seen.append)
+    m.check(FRAME, {1: (10.0, 10.0)}, 100.0)
+    m.check(FRAME, {1: (10.0, 10.0)}, 130.0)
+
+    assert len(seen) == 1
+    assert seen[0].kind == "missing_lid"
+
+
+def test_the_flagged_state_is_frozen_at_the_stop(scored):
+    """The stop freezes what was true when it fired - it is the record of
+    why the run halted, so later frames must not quietly edit it."""
+    scored[(10.0, 10.0)] = OPEN
+    m = MissingLid()
+    m.check(FRAME, {1: (10.0, 10.0)}, 100.0)
+    m.check(FRAME, {}, 130.0)                   # the jar is taken away
+    assert m.open_slots.keys() == {1}
+    assert m.stop_requested
+
+
+def test_reset_clears_the_stop_so_a_run_can_resume(scored):
+    scored[(10.0, 10.0)] = OPEN
+    m = MissingLid()
+    m.check(FRAME, {1: (10.0, 10.0)}, 100.0)
+    m.reset()
+    assert not m.stop_requested
+    assert m.open_slots == {}
 
 
 def test_a_slot_refilled_after_emptying_is_checked_again(scored):
+    """Only reachable after a reset, since the first alert stops the run."""
     scored[(10.0, 10.0)] = OPEN
     m = MissingLid()
     assert len(m.check(FRAME, {1: (10.0, 10.0)}, 100.0)) == 1
+    m.reset()
     assert m.check(FRAME, {}, 130.0) == []                 # slot empties
     assert len(m.check(FRAME, {1: (10.0, 10.0)}, 160.0)) == 1
 

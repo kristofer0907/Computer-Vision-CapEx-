@@ -30,6 +30,7 @@ and nothing whatsoever about the batch.
 from __future__ import annotations
 
 import logging
+from typing import Callable
 
 import numpy as np
 
@@ -68,32 +69,33 @@ class FallenCrucible():
         pass
 
 class MissingLid:
-    """A crucible put on a heater without a lid.
+    """A crucible put on a heater without a lid. Latching, and stops the run.
 
-    Checked once, when a crucible first appears on a heater slot, because
-    that is the moment the decision was made and the moment it can still be
-    acted on. Re-checking every frame afterwards would mostly re-report the
-    same jar, and lid_score is a per-frame verdict on an overlapping
-    distribution - given enough frames one of them will read wrong, and a
-    detector that cries wolf on a correctly lidded crucible is worse than one
-    that speaks once.
+    Checked once per arrival, when a crucible first appears in a heater slot:
+    that is when the decision was made and when it can still be acted on.
+    The verdict then latches: the slot stays flagged in `open_slots` so a
+    standing hazard keeps showing rather than scrolling past, while only the
+    one event is raised so the log does not fill with repeats. Because the
+    first flag also stops the run, that state is effectively frozen at the
+    moment of the stop - it is the record of why everything halted.
 
-    Raised at "alert", the highest severity: heating an open crucible is a
-    safety matter, not a process-quality observation like the other classes
-    in this file.
+    Latching also protects the verdict. lid_score reads an overlapping
+    distribution, so re-scoring the same jar every frame would eventually
+    produce a frame that says "lid" and silently clear a real hazard. Asking
+    once and holding the answer is the safer shape.
 
-    The verdict is only as good as pipeline.features.lid_score, which reads
-    the middle of a crucible and asks whether it is busy or smooth - see that
-    function for what it actually measures and where it fails. Two things
-    inherited from it matter here:
+    Once any slot is flagged, `stop_requested` is set and further frames are
+    not scored: an open crucible on a live heater is not a condition to keep
+    measuring through.
 
-      * it needs the detection to be centred, since it samples a fixed
-        window on the reported centre;
-      * lid and open overlap (56.0-82.7 against 4.8-67.7 on the labelled
-        set), so a single frame's answer is worth doubting. Every labelled
-        lid is caught, and the errors that remain are open jars called
-        lidded - which for this detector is the quiet direction: it stays
-        silent rather than raising a false alarm.
+    WHAT THIS STOPS, AND WHAT IT DOES NOT. It stops this pipeline. There is
+    no control channel from this system to the synthesis platform - it is a
+    camera and a process that looks at pictures, and stopping the robot is
+    out of scope for this phase (see CLAUDE.md). So this raises the alarm
+    and halts our own analysis; acting on it is a person's job, or a
+    controller integration that does not exist yet. `on_stop` is where that
+    integration attaches when it does. Reading this class as an interlock
+    that makes the bench safe would be a serious misreading.
     """
 
     #: Registry-style name, so this reads the same as pipeline/detectors/.
@@ -101,44 +103,79 @@ class MissingLid:
     description = "crucible placed on a heater without a lid"
 
     def __init__(self, heater_zone: str | None = None,
-                 threshold: float | None = None) -> None:
+                 threshold: float | None = None,
+                 on_stop: Callable[[Event], None] | None = None) -> None:
         self.heater_zone = heater_zone or REGION_TRACKING.heater_zone
         self.threshold = (DETECTION.lid_score_threshold
                           if threshold is None else threshold)
-        #: heater slots occupied on the previous frame, to fire on arrival only
+        #: called once when the stop is raised - the seam a real platform
+        #: stop would attach to. Nothing is wired to it today.
+        self.on_stop = on_stop
+
         self._seen: set[int] = set()
+        self._open: dict[int, Event] = {}
+        self._stopped = False
+
+    # ------------------------------------------------------------- queries
+    @property
+    def stop_requested(self) -> bool:
+        """True once an unlidded crucible has been seen on a heater."""
+        return self._stopped
+
+    @property
+    def open_slots(self) -> dict[int, Event]:
+        """Heater slots currently believed to hold an unlidded crucible."""
+        return dict(self._open)
 
     def reset(self) -> None:
         self._seen.clear()
+        self._open.clear()
+        self._stopped = False
 
+    # -------------------------------------------------------------- update
     def check(self, image: np.ndarray, on_heater: dict[int, tuple[float, float]],
               timestamp: float, frame_id: int = 0) -> list[Event]:
         """Score crucibles that just arrived on a heater.
 
         `on_heater` maps heater slot -> the crucible's (cx, cy) this frame.
-        Slots already occupied last frame are skipped; slots that emptied are
-        forgotten, so the same slot filling again is checked again.
+        Returns the events raised by this frame, which is at most one per
+        slot that just filled, and nothing at all once stopped.
         """
-        events: list[Event] = []
-        present = set(on_heater)
+        if self._stopped:
+            return []
 
+        present = set(on_heater)
+        events: list[Event] = []
         for slot in sorted(present - self._seen):
             cx, cy = on_heater[slot]
             score = lid_score(image, cx, cy)
             if score >= self.threshold:
                 log.info("heater slot %d: lid present (%.1f)", slot, score)
                 continue
-            events.append(Event(
+            event = Event(
                 kind="missing_lid", severity="alert",
                 message=(f"crucible placed on heater slot {slot} without a "
-                         f"lid (score {score:.1f}, below {self.threshold:.1f})"),
+                         f"lid (score {score:.1f}, below {self.threshold:.1f})"
+                         " - stopping"),
                 timestamp=timestamp, frame_id=frame_id,
                 detector=self.name, zone=self.heater_zone,
                 data={"heater_slot": slot, "lid_score": round(score, 1),
-                      "threshold": self.threshold, "cx": cx, "cy": cy},
-            ))
+                      "threshold": self.threshold, "cx": cx, "cy": cy,
+                      "stop_requested": True},
+            )
+            self._open[slot] = event
+            events.append(event)
             log.error("heater slot %d: NO LID (%.1f) - crucible is about to be "
                       "heated open", slot, score)
 
         self._seen = present
+
+        if events and not self._stopped:
+            self._stopped = True
+            log.error("STOP requested by %s. This halts the monitoring "
+                      "pipeline only - nothing here can stop the platform.",
+                      self.name)
+            if self.on_stop is not None:
+                self.on_stop(events[0])
+
         return events
