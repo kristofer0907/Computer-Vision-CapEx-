@@ -376,6 +376,8 @@ class RegionCoordinator:
         self._recently_closed: list[tuple[Track, str, float]] = []
         self._prev_active_ids: dict[str, set[int]] = {z: set() for z in trackers}
         self._last_handoffs: list[tuple[int, str, str]] = []
+        #: zone -> detections seen there this frame that carry no identity
+        self.untracked: dict[str, list[Detection]] = {}
 
     def start(self) -> None:
         for tracker in self.trackers.values():
@@ -403,12 +405,18 @@ class RegionCoordinator:
     def update(self, detections: list[Detection], timestamp: float
                ) -> dict[str, tuple[list[Track], list[Track]]]:
         buckets: dict[str, list[Detection]] = {name: [] for name in self.trackers}
+        self.untracked = {}
         for d in detections:
             zone = self.zone_map.zone_at(d.cx, d.cy)
-            if zone is None or zone not in self.trackers:
+            if zone is None:
                 _warn_once(
                     f"detection at ({d.cx:.0f},{d.cy:.0f}) is outside every "
-                    "tracked zone")
+                    "zone polygon")
+                continue
+            if zone not in self.trackers:
+                # a real crucible, in a zone that does not carry identity
+                # (REGION_TRACKING.id_zones) - reported and drawn, not numbered
+                self.untracked.setdefault(zone, []).append(d)
                 continue
             buckets[zone].append(d)
 
@@ -486,6 +494,8 @@ def create_region_coordinator(frame_size: tuple[int, int] | None = None,
     id_source = itertools.count(1)
     trackers: dict[str, Tracker] = {}
     for zone in REGION_TRACKING.region_sequence:
+        if zone not in REGION_TRACKING.id_zones:
+            continue    # detected and reported, but not numbered
         if zone in REGION_TRACKING.slot_files:
             trackers[zone] = SlotTracker(zone, frame_size, id_source=id_source)
         elif zone in REGION_TRACKING.lane_files:

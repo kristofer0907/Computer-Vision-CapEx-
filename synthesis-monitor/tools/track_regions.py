@@ -57,7 +57,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from config import DATA_DIR, DETECTION, ensure_dirs
+from config import DATA_DIR, DETECTION, REGION_TRACKING, ensure_dirs
+from pipeline.handoff import HeaterHandoff
+from pipeline.lineage import VialLineage
 from pipeline.region_trackers import (FifoTracker, RegionCoordinator, SlotTracker,
                                       create_region_coordinator)
 
@@ -123,6 +125,8 @@ def summarize(coord: RegionCoordinator, results: dict, frame_idx: int) -> str:
             parts.append(f"{zone}={occupied}/{len(status)}")
         elif isinstance(tracker, FifoTracker):
             parts.append(f"{zone}(queue)={tracker.queue_order()}")
+    for zone, dets in coord.untracked.items():
+        parts.append(f"{zone}={len(dets)}(unnumbered)")
     parts.append(f"handoffs={len(coord.handoffs_this_frame())}")
     return "  ".join(parts)
 
@@ -138,6 +142,34 @@ def _text(out: np.ndarray, s: str, org: tuple[int, int], color, scale: float,
                 thick + 2, cv2.LINE_AA)
     cv2.putText(out, s, org, cv2.FONT_HERSHEY_SIMPLEX, scale, color,
                 thick, cv2.LINE_AA)
+
+
+def slot_occupancy(coord: RegionCoordinator, zone: str) -> dict[int, bool]:
+    """Which slots of `zone` read full this frame. The only thing
+    pipeline/lineage.py needs, and all it is allowed to see."""
+    tracker = coord.trackers.get(zone)
+    if not isinstance(tracker, SlotTracker):
+        return {}
+    return {sid: occupant is not None
+            for sid, occupant in tracker.slot_status().items()}
+
+
+def slot_positions(coord: RegionCoordinator, zone: str) -> dict[int, tuple[float, float]]:
+    """Where each occupied slot's crucible was actually detected, so lineage
+    can tell a replaced jar from the same one sitting still."""
+    tracker = coord.trackers.get(zone)
+    if not isinstance(tracker, SlotTracker):
+        return {}
+    return {t.slot_id: (t.cx, t.cy) for t in tracker.tracks
+            if t.slot_id is not None}
+
+
+def short_vial_id(vial_id: str | None) -> str:
+    """Trim an id to something that fits under a crucible: the last four
+    digits of its timestamp, which are unique enough to follow by eye."""
+    if not vial_id:
+        return ""
+    return f"#{vial_id.rsplit('-', 1)[-1][-4:]}"
 
 
 def track_label(track_id: int) -> str:
@@ -163,7 +195,8 @@ def lid_state(image: np.ndarray, t) -> tuple[str, float | None]:
 
 
 def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
-                 results: dict) -> np.ndarray:
+                 results: dict, lineage: VialLineage | None = None,
+                 handoff: HeaterHandoff | None = None) -> np.ndarray:
     out = coord.zone_map.draw(image, color=BASE_BGR)
     handed_off = {tid for tid, _from, _to in coord.handoffs_this_frame()}
 
@@ -192,6 +225,19 @@ def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
             _text(out, f"{zone} exit", (b[0] + 14, b[1]), LANE_BGR,
                   scale * 0.6, 1)
 
+    # Crucibles in zones that do not carry identity (storing, the injection
+    # lane): shown so you can see them, deliberately without a number.
+    for zone, dets in coord.untracked.items():
+        for d in dets:
+            state, _score = lid_state(image, d)
+            color = {"lid": LID_BGR, "open": OPEN_BGR}.get(state, UNKNOWN_BGR)
+            c = (int(round(d.cx)), int(round(d.cy)))
+            r = int(round(d.radius))
+            cv2.circle(out, c, r, color, max(1, thick - 1), cv2.LINE_AA)
+            _text(out, "-", c, color, scale * 0.62, thick, center=True)
+            _text(out, zone[:4], (c[0], c[1] + r + int(round(26 * scale))),
+                  color, scale * 0.46, max(1, thick - 1), center=True)
+
     for zone, (active, closed) in results.items():
         queue = (coord.trackers[zone].queue_order()
                  if isinstance(coord.trackers[zone], FifoTracker) else [])
@@ -210,13 +256,36 @@ def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
             # The id goes inside the disc and the zone just under it: slots
             # sit ~140 px apart, so a wide label above each one collides with
             # its neighbour's.
+            vial_id = None
+            if handoff is not None and t.slot_id is not None:
+                if (zone == REGION_TRACKING.heater_zone
+                        and t.slot_id == handoff.heater_slot):
+                    vial_id = handoff.held_id
+                elif zone == REGION_TRACKING.cooling_zone:
+                    vial_id = handoff.storage_ids.get(t.slot_id)
+            if vial_id is None and lineage is not None and t.slot_id is not None:
+                if zone == REGION_TRACKING.heater_zone:
+                    vial_id = lineage.vial_on_heater(t.slot_id)
+                elif zone == REGION_TRACKING.cooling_zone:
+                    vial_id = lineage.vial_on_cooling(t.slot_id)
+
+            # Where a handoff id exists it IS the identity, so it takes the
+            # centre. The SlotTracker number is keyed to the slot, not the
+            # crucible - on a heater it stays put across a replacement, which
+            # is exactly the thing being corrected, so showing it as the
+            # headline number contradicts the mechanism underneath it.
+            if vial_id:
+                headline = short_vial_id(vial_id)
+            else:
+                headline = track_label(t.track_id)
+
             if t.slot_id is not None:
                 where = f"{zone[:4]} {t.slot_id}"
             elif t.track_id in queue:
                 where = f"{zone[:4]} q{queue.index(t.track_id) + 1}"
             else:
                 where = zone[:4]
-            _text(out, track_label(t.track_id), c, color, scale * 0.62, thick,
+            _text(out, headline, c, color, scale * 0.62, thick,
                   center=True)
             _text(out, where, (c[0], c[1] + r + int(round(26 * scale))),
                   color, scale * 0.46, max(1, thick - 1), center=True)
@@ -251,7 +320,7 @@ def _legend(out: np.ndarray, scale: float, thick: int) -> None:
 
 
 def as_json(name: str, results: dict, coord: RegionCoordinator,
-            image: np.ndarray) -> dict:
+            image: np.ndarray, lineage: VialLineage | None = None) -> dict:
     zones = {}
     for zone, (active, _closed) in results.items():
         tracker = coord.trackers[zone]
@@ -270,6 +339,7 @@ def as_json(name: str, results: dict, coord: RegionCoordinator,
     return {
         "frame": name,
         "zones": zones,
+        "lineage": lineage.as_dict() if lineage else None,
         "handoffs": [{"track_id": tid, "from": frm, "to": to}
                     for tid, frm, to in coord.handoffs_this_frame()],
         "closed": [{"zone": zone, "track_id": t.track_id, "reason": t.closed_reason}
@@ -363,6 +433,8 @@ def main(argv: list[str] | None = None) -> int:
               f"with tracking overlays.", flush=True)
         print("Press ctrl-c to stop.\n", flush=True)
 
+    lineage = VialLineage()
+    handoff = HeaterHandoff(REGION_TRACKING.handoff_heater_slot)
     coord: RegionCoordinator | None = None
     dumped: list[dict] = []
     n = 0
@@ -384,13 +456,25 @@ def main(argv: list[str] | None = None) -> int:
 
             detections = localizer.locate(frame)
             results = coord.update(detections, frame.timestamp)
+            lineage.update(slot_occupancy(coord, REGION_TRACKING.heater_zone),
+                           slot_occupancy(coord, REGION_TRACKING.cooling_zone),
+                           frame.timestamp,
+                           heater_pos=slot_positions(
+                               coord, REGION_TRACKING.heater_zone))
+            heat_occ = slot_occupancy(coord, REGION_TRACKING.heater_zone)
+            handoff.update(
+                heat_occ.get(REGION_TRACKING.handoff_heater_slot, False),
+                slot_occupancy(coord, REGION_TRACKING.cooling_zone),
+                frame.timestamp)
 
             name = str((frame.truth or {}).get("name", "")
                        or time.strftime("%Y%m%d_%H%M%S"))
             log.info(summarize(coord, results, n))
-            dumped.append(as_json(name, results, coord, frame.image))
+            record = as_json(name, results, coord, frame.image, lineage)
+            record["handoff"] = handoff.as_dict()
+            dumped.append(record)
 
-            overlay = draw_overlay(frame.image, coord, results)
+            overlay = draw_overlay(frame.image, coord, results, lineage, handoff)
             cv2.imwrite(str(overlay_dir / f"{n:04d}_{Path(name).stem}.jpg"), overlay)
             # Written every frame, not just at the end: a live run is stopped
             # with ctrl-c, and losing the whole record to that would be daft.

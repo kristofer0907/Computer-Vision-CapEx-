@@ -319,13 +319,47 @@ class RegionTrackingConfig:
         "injection": "lane_injection.json",
     })
 
-    # The physical process order. RegionCoordinator uses this - not a
-    # per-zone adjacency table - to decide which zones may hand a track's
-    # identity off to which others: a track closing in zone i may be picked
-    # up by a new track spawning in zone i-1 or i+1.
+    # The physical process order, used for reporting and to bound which
+    # zones may hand a track's identity to which others.
     region_sequence: tuple[str, ...] = (
         "storing", "injection", "heating", "collection",
     )
+
+    # Only these zones carry identity. A crucible is not numbered while it
+    # sits in the storing rack or crosses the injection lane - it gets an id
+    # when it reaches a heater, and keeps it through to the collection rack.
+    #
+    # Before this, every zone assigned ids and every move between zones had
+    # to be stitched back together by the handoff logic. Storing holds twelve
+    # near-identical jars that the arm lifts in an arbitrary order, so those
+    # stitches were guesses, and a six-crucible run numbered into the teens.
+    # Numbering only what the process actually distinguishes removes the
+    # guessing rather than tuning it.
+    id_zones: tuple[str, ...] = ("heating", "collection")
+
+    # Which zones the heater->cooling lineage watches (pipeline/lineage.py).
+    # "collection" is the cooling/end rack on this bench; rename here if the
+    # zones are ever re-traced under different names.
+    heater_zone: str = "heating"
+    cooling_zone: str = "collection"
+
+    # Only this heater slot is watched by pipeline/handoff.py. Slot 1 is the
+    # left pad, the one the arm actually cycles; slot 0 sits untouched for a
+    # whole run and is deliberately ignored.
+    handoff_heater_slot: int = 1
+
+    # A heater slot that stays occupied but whose detection jumps further
+    # than this is treated as a different vial, not the same one wobbling.
+    # A swap between two captures never shows the slot empty, so occupancy
+    # alone cannot see it - but a replaced jar does not land back on the same
+    # pixels. Measured on capture/tracking_practice: an untouched jar moved
+    # 0.00-6.40 px between frames (identical on two pairs, mean 2.12), while
+    # the slot being worked moved 4.24-28.79 px, 14+ on four of five steps.
+    # 12 px sits above the detector's own noise on a static jar and below a
+    # typical replacement. The two ranges do overlap, so a slow careful swap
+    # can still pass as one vial - this narrows the blind spot rather than
+    # closing it.
+    heater_replacement_move_px: float = 12.0
 
     # Frames a slot may sit unmatched before its track is closed as vacated.
     slot_max_missed_frames: int = 2
