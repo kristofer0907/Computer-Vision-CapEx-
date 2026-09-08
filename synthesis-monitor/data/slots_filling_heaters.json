@@ -1,0 +1,21 @@
+{
+  "stage": "filling",
+  "image": "filling_reference.jpg",
+  "image_size": [
+    4056,
+    3040
+  ],
+  "slot_radius_px": 108.0,
+  "slots": [
+    {
+      "id": 0,
+      "x": 2031,
+      "y": 2403
+    },
+    {
+      "id": 1,
+      "x": 1818,
+      "y": 2412
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "stage": "storing",
+  "image": "filling_reference.jpg",
+  "image_size": [
+    4056,
+    3040
+  ],
+  "slot_radius_px": 45.0,
+  "slots": [
+    {
+      "id": 0,
+      "x": 1416.1,
+      "y": 1047.9
+    },
+    {
+      "id": 1,
+      "x": 1588.2,
+      "y": 1024.9
+    },
+    {
+      "id": 2,
+      "x": 1579.3,
+      "y": 1181.8
+    },
+    {
+      "id": 3,
+      "x": 1437.0,
+      "y": 1190.2
+    },
+    {
+      "id": 4,
+      "x": 1426.3,
+      "y": 894.3
+    },
+    {
+      "id": 5,
+      "x": 1575.9,
+      "y": 886.0
+    },
+    {
+      "id": 6,
+      "x": 1414.5,
+      "y": 747.8
+    },
+    {
+      "id": 7,
+      "x": 1573.4,
+      "y": 743.1
+    },
+    {
+      "id": 8,
+      "x": 1412.3,
+      "y": 597.7
+    },
+    {
+      "id": 9,
+      "x": 1568.1,
+      "y": 584.6
+    },
+    {
+      "id": 10,
+      "x": 1566.7,
+      "y": 450.9
+    },
+    {
+      "id": 11,
+      "x": 1412.2,
+      "y": 447.0
+    }
+  ],
+  "note": "positions data-derived from clustering real detect_crucibles() output across capture/second_iteration/crucibles/undistored/, not hand-marked - see chat log"
+}

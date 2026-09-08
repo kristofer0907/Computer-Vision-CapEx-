@@ -1,0 +1,16 @@
+{
+  "stage": "injection",
+  "image": "injection_reference.jpg",
+  "image_size": [
+    4056,
+    3040
+  ],
+  "entry": [
+    1609,
+    1376
+  ],
+  "exit": [
+    1605,
+    2036
+  ]
+}
