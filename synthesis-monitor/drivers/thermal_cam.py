@@ -40,6 +40,12 @@ THERMAL_ROWS, THERMAL_COLS = 24, 32
 # 122 rows; see LeptonSource._to_celsius.
 LEPTON_ROWS, LEPTON_COLS = 120, 160
 
+# Staleness control, see LeptonSource._read_fresh. A grab slower than this
+# waited on the sensor, so it is a live frame rather than a queued one; the
+# board runs at 8.8 fps, i.e. 113 ms, and queued grabs measure under 1 ms.
+LIVE_GRAB_S = 0.025
+MAX_DRAIN_FRAMES = 16
+
 
 class MLX90640Source(ThermalSource):
     name = "mlx90640"
@@ -195,6 +201,13 @@ class LeptonSource(ThermalSource):
         if not cap.isOpened():
             raise HardwareUnavailable(f"/dev/video{index} would not open")
 
+        # Smallest queue the driver will accept. The board streams at 8.8 fps
+        # whether or not anyone is reading, and read() returns the OLDEST
+        # queued buffer, so a deep queue is pure latency at our poll rate.
+        # Measured here: the default of 4 buffers, drained once every 3 s, put
+        # the displayed frame 12 s behind the room. Not every driver honours
+        # this, which is why capture() drains as well.
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         # Order matters: the pixel format first, then disable the automatic
         # conversion to RGB that would throw the high byte away.
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y', '1', '6', ' '))
@@ -232,12 +245,31 @@ class LeptonSource(ThermalSource):
         image = frame[:LEPTON_ROWS] if frame.shape[0] > LEPTON_ROWS else frame
         return image.astype(np.float32) / 100.0 - 273.15
 
+    def _read_fresh(self) -> tuple[bool, np.ndarray | None]:
+        """Discard whatever is queued, then return the live frame.
+
+        The sensor free-runs at 8.8 fps and we poll every few seconds, so
+        without this every read hands back a buffer from several polls ago.
+
+        Timing tells queued from live: a buffered frame is already in memory
+        and grab() returns immediately, while a live one costs about 1/8.8 s
+        because grab() waits for the sensor. So drain while grab() is instant
+        and stop at the first one that blocks - that one is current.
+        """
+        for _ in range(MAX_DRAIN_FRAMES):
+            began = time.monotonic()
+            if not self._cap.grab():
+                return False, None
+            if (time.monotonic() - began) >= LIVE_GRAB_S:
+                break
+        return self._cap.retrieve()
+
     def capture(self) -> ThermalFrame:
         if not self._started:
             raise RuntimeError("capture() before start()")
         last = "no attempt"
         for _ in range(self.max_read_retries):
-            ok, frame = self._cap.read()
+            ok, frame = self._read_fresh()
             if ok and frame is not None:
                 return ThermalFrame(self._to_celsius(frame), time.time(),
                                     self._next_id(), self.name, False)
