@@ -1,7 +1,7 @@
 """SlotTracker, FifoTracker and RegionCoordinator against synthetic data.
 
 Deliberately independent of the camera and of pipeline/tracking.py's
-vial-flow HungarianTracker - these are the real-hardware crucible zone
+crucible-flow HungarianTracker - these are the real-hardware crucible zone
 mechanics (nearest fixed slot, order along a lane, handoff across a zone
 boundary), pinned down before any real capture pipeline is wired to them.
 """
@@ -464,8 +464,9 @@ def test_track_label_is_three_digits():
     assert track_label(1000) == "1000"
 
 
-def test_create_localizer_knows_crucible_but_auto_is_unchanged():
+def test_auto_localizer_is_the_crucible_one():
+    """"auto" is classical Hough now - the settled MVP decision."""
     from pipeline.localize import CrucibleLocalizer, create_localizer
 
     assert isinstance(create_localizer("crucible"), CrucibleLocalizer)
-    assert not isinstance(create_localizer("auto"), CrucibleLocalizer)
+    assert isinstance(create_localizer("auto"), CrucibleLocalizer)

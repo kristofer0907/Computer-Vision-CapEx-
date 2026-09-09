@@ -1,10 +1,9 @@
 """Flask dashboard.
 
 Reads only. It owns no camera, no sensor and no pipeline - everything it
-renders arrives from the worker processes through the Supervisor's slots, and
-history comes from SQLite. That separation is what lets a request handler be
-slow, or a browser tab be left open for a week, without any of it reaching the
-hardware.
+renders arrives through the Monitor's slots (main.py), and history comes from
+SQLite. That separation is what lets a request handler be slow, or a browser
+tab be left open for a week, without any of it reaching the hardware.
 
     python -m dashboard.app          # standalone, starts its own supervisor
     python main.py                   # normal entry point
@@ -29,7 +28,6 @@ import numpy as np
 from flask import Flask, Response, jsonify, render_template, request, send_file
 
 from config import DASHBOARD, DETECTION, GEOMETRY, TRACKING, ZONES
-from runtime.supervisor import Supervisor
 from storage.db import Database
 from storage.images import SnapshotStore
 
@@ -65,7 +63,7 @@ def _mjpeg(read, label: str, interval_s: float):
         time.sleep(max(0.05, min(interval_s, 1.0)))
 
 
-def create_app(supervisor: Supervisor) -> Flask:
+def create_app(supervisor) -> Flask:
     app = Flask(__name__)
     app.config["SUPERVISOR"] = supervisor
     snapshots = SnapshotStore()
@@ -103,7 +101,7 @@ def create_app(supervisor: Supervisor) -> Flask:
     def index():
         return render_template(
             "index.html",
-            n_vials=GEOMETRY.n_vials,
+            n_crucibles=GEOMETRY.n_crucibles,
             stages=ZONES.order(),
             zones_calibrated=ZONES.calibrated,
             hysteresis_n=TRACKING.stage_hysteresis_n,
@@ -121,7 +119,7 @@ def create_app(supervisor: Supervisor) -> Flask:
 
     @app.route("/feed/overlay")
     def feed_overlay():
-        """The analysed frame with zones, track IDs and any flagged vials.
+        """The analysed frame with zones, track IDs and any flagged crucibles.
 
         Updates at the analysis cadence, so tens of seconds between frames.
         That is not a stall - the live feed next to it shows the real rate.
@@ -170,15 +168,15 @@ def create_app(supervisor: Supervisor) -> Flask:
             "zones_calibrated": ZONES.calibrated,
         })
 
-    @app.route("/api/vials")
-    def api_vials():
+    @app.route("/api/crucibles")
+    def api_crucibles():
         result, _ = supervisor.result.get()
         if result is None:
-            return jsonify({"vials": [], "frame_id": None})
+            return jsonify({"crucibles": [], "frame_id": None})
         return jsonify({
             "frame_id": result.frame_id,
             "timestamp": result.timestamp,
-            "vials": [v.__dict__ for v in result.vials],
+            "crucibles": [v.__dict__ for v in result.crucibles],
         })
 
     @app.route("/api/events")
@@ -203,9 +201,9 @@ def create_app(supervisor: Supervisor) -> Flask:
             "source": "memory",
         })
 
-    @app.route("/api/vials/<int:track_id>/series")
-    def api_vial_series(track_id: int):
-        """One feature's history for one vial. Empty until features exist."""
+    @app.route("/api/crucibles/<int:track_id>/series")
+    def api_crucible_series(track_id: int):
+        """One feature's history for one crucible. Empty until features exist."""
         feature = request.args.get("feature", "")
         if not feature:
             return jsonify({"error": "feature query parameter is required"}), 400
@@ -214,7 +212,7 @@ def create_app(supervisor: Supervisor) -> Flask:
             return jsonify({"error": "persistence is disabled"}), 503
         try:
             return jsonify({"track_id": track_id, "feature": feature,
-                            "points": db.vial_series(track_id, feature)})
+                            "points": db.crucible_series(track_id, feature)})
         except Exception as exc:
             log.exception("dashboard: series query failed")
             return jsonify({"error": str(exc)}), 500
@@ -264,18 +262,18 @@ def _source_state(msg, ts: float, now: float) -> dict:
 
 def _pipeline_state(result, ts: float, now: float) -> dict:
     if result is None:
-        return {"frame_id": None, "n_vials": 0, "stage_counts": {},
+        return {"frame_id": None, "n_crucibles": 0, "stage_counts": {},
                 "age_s": None, "warnings": [], "timings_ms": {}}
     return {
         "frame_id": result.frame_id,
         "timestamp": result.timestamp,
         "age_s": round(now - ts, 1) if ts else None,
-        "n_vials": result.n_vials,
+        "n_crucibles": result.n_crucibles,
         "stage_counts": result.stage_counts,
         "worst_severity": result.worst_severity(),
         "warnings": result.warnings,
         "timings_ms": result.timings_ms,
-        "vials": [v.__dict__ for v in result.vials],
+        "crucibles": [v.__dict__ for v in result.crucibles],
     }
 
 
@@ -293,19 +291,21 @@ def _event_json(event) -> dict:
 
 
 def main() -> None:
-    """Standalone dashboard: starts its own supervisor and serves it."""
+    """Standalone dashboard: starts its own Monitor and serves it."""
+    from main import Monitor
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
-    supervisor = Supervisor()
-    supervisor.start()
-    app = create_app(supervisor)
+    monitor = Monitor()
+    monitor.start()
+    app = create_app(monitor)
     log.info("dashboard on http://localhost:%d", DASHBOARD.port)
     try:
         app.run(host=DASHBOARD.host, port=DASHBOARD.port, debug=False,
                 use_reloader=False, threaded=True)
     finally:
-        supervisor.stop()
+        monitor.stop()
 
 
 if __name__ == "__main__":

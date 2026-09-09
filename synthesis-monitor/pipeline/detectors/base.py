@@ -27,7 +27,7 @@ down with it:
 
 Deliberately absent from the context: thermal data. The MLX90640 is a passive
 logger for researchers to look at - no model, no algorithm and no part of the
-anomaly logic runs on it. At 2.4 cm/px a vial covers one or two pixels, so
+anomaly logic runs on it. At 2.4 cm/px a crucible covers one or two pixels, so
 there is nothing there to run anything on. It is logged and displayed, and
 that is the whole scope.
 """
@@ -36,14 +36,15 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
 import numpy as np
 
 from drivers.base import Frame
-from pipeline.history import VialHistory
-from pipeline.types import Event, Track, VialReport
+from pipeline.history import CrucibleHistory
+from pipeline.types import AnomalyResult, Event, Track, CrucibleReport
 from pipeline.zones import ZoneMap
 
 log = logging.getLogger(__name__)
@@ -51,19 +52,19 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class ZoneView:
-    """One zone's pixels, with the vials optionally punched out.
+    """One zone's pixels, with the crucibles optionally punched out.
 
-    `bench_mask` is the zone polygon minus a disc around every vial in it -
+    `bench_mask` is the zone polygon minus a disc around every crucible in it -
     i.e. the bare aluminium (or the filter paper, if that route is taken).
-    That is the surface a spill would show up on, and masking the vials out
-    stops a vial's own colour from reading as a wet patch.
+    That is the surface a spill would show up on, and masking the crucibles out
+    stops a crucible's own colour from reading as a wet patch.
     """
 
     name: str
     image: np.ndarray                      # BGR crop of the zone's bounding box
     bounds: tuple[int, int, int, int]      # (x0, y0, x1, y1) in frame coords
     zone_mask: np.ndarray                  # 255 inside the polygon
-    bench_mask: np.ndarray                 # zone_mask minus the vials
+    bench_mask: np.ndarray                 # zone_mask minus the crucibles
     track_ids: list[int] = field(default_factory=list)
 
     def to_frame(self, x: float, y: float) -> tuple[float, float]:
@@ -79,31 +80,35 @@ class DetectionContext:
     timestamp: float
     frame_id: int
 
-    #: Confirmed, currently-visible vials.
+    #: Confirmed, currently-visible crucibles.
     tracks: list[Track]
-    #: Same vials, with their features. Indexed the same as `tracks` is not
+    #: Same crucibles, with their features. Indexed the same as `tracks` is not
     #: guaranteed - match on track_id.
-    reports: list[VialReport]
+    reports: list[CrucibleReport]
 
-    #: track_id -> BGR crop copy around that vial.
+    #: track_id -> BGR crop copy around that crucible.
     crops: dict[int, np.ndarray]
     #: track_id -> uint8 mask, 255 over the liquid disc, in crop coordinates.
     masks: dict[int, np.ndarray]
     #: track_id -> (x0, y0, x1, y1) of the crop in frame coordinates.
     boxes: dict[int, tuple[int, int, int, int]]
 
-    #: zone name -> ZoneView, for surface checks that are not about one vial.
+    #: zone name -> ZoneView, for surface checks that are not about one crucible.
     zones: dict[str, ZoneView]
     zone_map: ZoneMap
 
-    #: Rolling per-vial memory: past features and past crops.
-    history: VialHistory
+    #: Rolling per-crucible memory: past features and past crops.
+    history: CrucibleHistory
 
     #: Tracks that ended on this frame. closed_reason is "oven" for an
-    #: inferred oven entry or "lost" for a vial that vanished somewhere it
+    #: inferred oven entry or "lost" for a crucible that vanished somewhere it
     #: should not have. Note the known blind spot: a failure during cooling
     #: is currently indistinguishable from a normal oven entry.
     closed_tracks: list[Track] = field(default_factory=list)
+
+    #: Relative path of this frame's saved snapshot, written into every
+    #: AnomalyResult. Empty when the frame was not persisted.
+    frame_ref: str = ""
 
     #: Analysis interval in seconds that produced this frame. Needed by
     #: anything rate-based - the cadence switches between 45 s and 10 s, so a
@@ -111,7 +116,7 @@ class DetectionContext:
     interval_s: float = 0.0
 
     # ---------------------------------------------------------------- sugar
-    def report_for(self, track_id: int) -> VialReport | None:
+    def report_for(self, track_id: int) -> CrucibleReport | None:
         for r in self.reports:
             if r.track_id == track_id:
                 return r
@@ -124,7 +129,7 @@ class DetectionContext:
         return None
 
     def in_stage(self, stage: str) -> list[Track]:
-        """Confirmed vials whose committed stage is `stage`."""
+        """Confirmed crucibles whose committed stage is `stage`."""
         return [t for t in self.tracks if t.stage == stage]
 
     def feature_column(self, key: str, stage: str | None = None
@@ -133,7 +138,7 @@ class DetectionContext:
 
         The shape batch-median scoring wants. Restrict to one stage when the
         comparison should only be against peers at the same point in the
-        process - vials in heating and vials still in filling are not
+        process - crucibles in heating and crucibles still in filling are not
         comparable and pooling them widens the median's spread for nothing.
         """
         ids: list[int] = []
@@ -149,7 +154,7 @@ class DetectionContext:
         return ids, values
 
     def previous_crop(self, track_id: int) -> np.ndarray | None:
-        """This vial's previous crop, resized to match its current one."""
+        """This crucible's previous crop, resized to match its current one."""
         current = self.crops.get(track_id)
         if current is None:
             return None
@@ -176,10 +181,27 @@ class Detector(ABC):
         """Called once at shutdown. Must be safe to call twice."""
 
     @abstractmethod
-    def check(self, ctx: DetectionContext) -> list[Event]:
-        """Return any events this frame warrants. Empty list is normal."""
+    def check(self, ctx: DetectionContext) -> list[AnomalyResult]:
+        """Return this frame's verdicts. Empty list means nothing to say."""
 
-    # ------------------------------------------------------------- helper
+    # ------------------------------------------------------------- helpers
+    def anomaly(self, ctx: DetectionContext, zone: str,
+                tripped: bool = True,
+                failure_type: str | None = None) -> AnomalyResult:
+        """Build this detector's verdict for one zone in this frame.
+
+        `failure_type` defaults to the detector's own name, which is what
+        a detector with a single failure mode wants.
+        """
+        ts = ctx.timestamp or time.time()
+        return AnomalyResult(
+            tripped=tripped,
+            zone=zone,
+            failure_type=failure_type or self.name,
+            timestamp=datetime.fromtimestamp(ts),
+            frame_ref=ctx.frame_ref,
+        )
+
     def event(self, ctx: DetectionContext, kind: str, message: str,
               severity: str = "warning", track_id: int | None = None,
               zone: str | None = None, **data) -> Event:
@@ -216,7 +238,7 @@ class NotImplementedDetector(Detector):
     def __init__(self) -> None:
         self._announced = False
 
-    def check(self, ctx: DetectionContext) -> list[Event]:
+    def check(self, ctx: DetectionContext) -> list[AnomalyResult]:
         if not self._announced:
             self._announced = True
             log.info("detector %r is a stub - loaded but not detecting anything",

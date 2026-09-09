@@ -1,10 +1,10 @@
 """Synthetic platform renderer used by the simulated camera backends.
 
-This is not a toy noise generator. It renders 18 vials moving through the real
+This is not a toy noise generator. It renders 18 crucibles moving through the real
 zone sequence (filling -> conveyor -> lidding -> heating -> cooling -> oven)
 with the real geometry, so the localiser, tracker, feature extractor and
 batch-median scorer all get exercised end to end with no hardware attached.
-One vial can be flagged anomalous (hue shift + turbidity ramp) to verify the
+One crucible can be flagged anomalous (hue shift + turbidity ramp) to verify the
 scoring actually fires.
 
 Everything here is fake. It validates plumbing and logic, never chemistry.
@@ -27,7 +27,7 @@ STAGE_DWELL_S: dict[str, float] = {
     "heating": 60.0,
     "cooling": 50.0,
 }
-DEPARTURE_PACE_S = 35.0   # one vial leaves the filling rack every 35 sim-seconds
+DEPARTURE_PACE_S = 35.0   # one crucible leaves the filling rack every 35 sim-seconds
 TRAVEL_FRACTION = 0.4
 
 # The scene renders whatever zones config actually has, which after
@@ -45,7 +45,7 @@ def _poly_center(poly) -> tuple[float, float]:
 
 
 @dataclass
-class VialState:
+class CrucibleState:
     index: int
     x: float          # normalised frame coords
     y: float
@@ -60,15 +60,15 @@ class VialState:
 class SyntheticPlatform:
     """Deterministic-in-time scene: state is a pure function of sim-time."""
 
-    def __init__(self, n_vials: int | None = None) -> None:
-        self.n_vials = n_vials or GEOMETRY.n_vials
+    def __init__(self, n_crucibles: int | None = None) -> None:
+        self.n_crucibles = n_crucibles or GEOMETRY.n_crucibles
         self.w = GEOMETRY.frame_width_px
         self.h = GEOMETRY.frame_height_px
-        self.r_px = int(round(GEOMETRY.vial_radius_px))
-        self._rng = np.random.default_rng(0xCA9E)  # fixed: vials stay themselves
-        # Fixed per-vial cosmetic jitter so vials are not clones.
-        self._hue_jitter = self._rng.uniform(-3.0, 3.0, self.n_vials)
-        self._sat_jitter = self._rng.uniform(-12.0, 12.0, self.n_vials)
+        self.r_px = int(round(GEOMETRY.crucible_radius_px))
+        self._rng = np.random.default_rng(0xCA9E)  # fixed: crucibles stay themselves
+        # Fixed per-crucible cosmetic jitter so crucibles are not clones.
+        self._hue_jitter = self._rng.uniform(-3.0, 3.0, self.n_crucibles)
+        self._sat_jitter = self._rng.uniform(-12.0, 12.0, self.n_crucibles)
         self._zone_centers = {k: _poly_center(v) for k, v in ZONES.polygons.items()}
         # Only the stages that actually have a polygon to move to. A traced
         # calibration may name its zones differently or omit one.
@@ -92,7 +92,7 @@ class SyntheticPlatform:
 
     # ---------------------------------------------------------------- layout
     def _build_fill_slots(self) -> list[tuple[float, float]]:
-        """18 vials in 2 rows x 9 inside the filling polygon."""
+        """18 crucibles in 2 rows x 9 inside the filling polygon."""
         if self._fill_zone is None:
             # No zones configured at all. Lay the rack out across the middle
             # so the renderer still produces something to look at.
@@ -109,7 +109,7 @@ class SyntheticPlatform:
                 fx = x0 + (x1 - x0) * (c + 0.5) / cols
                 fy = y0 + (y1 - y0) * (r + 0.5) / rows
                 slots.append((fx, fy))
-        return slots[: self.n_vials]
+        return slots[: self.n_crucibles]
 
     def _build_background(self) -> np.ndarray:
         """Platform band, LED falloff over the uncovered ~20 cm, vignetting."""
@@ -144,10 +144,10 @@ class SyntheticPlatform:
         return np.clip(img.astype(np.float32) * illum[..., None], 0, 255).astype(np.uint8)
 
     # ---------------------------------------------------------------- state
-    def states_at(self, t: float) -> list[VialState]:
-        """Vial states at simulated time t (seconds since batch start)."""
-        out: list[VialState] = []
-        for i in range(self.n_vials):
+    def states_at(self, t: float) -> list[CrucibleState]:
+        """Crucible states at simulated time t (seconds since batch start)."""
+        out: list[CrucibleState] = []
+        for i in range(self.n_crucibles):
             depart = i * DEPARTURE_PACE_S
             if t < depart:
                 st = self._state_in_filling(i, t)
@@ -164,17 +164,17 @@ class SyntheticPlatform:
             205.0,
         )
 
-    def _state_in_filling(self, i: int, t: float) -> VialState:
+    def _state_in_filling(self, i: int, t: float) -> CrucibleState:
         hue, sat, val = self._base_colour(i)
         fx, fy = self._fill_slots[i]
         # Fill level rises during the shared filling step -> brightness ramp.
-        fill = min(1.0, t / max(DEPARTURE_PACE_S * self.n_vials * 0.35, 1.0))
-        return VialState(i, fx, fy, self._fill_zone or FALLBACK_STAGE, hue,
+        fill = min(1.0, t / max(DEPARTURE_PACE_S * self.n_crucibles * 0.35, 1.0))
+        return CrucibleState(i, fx, fy, self._fill_zone or FALLBACK_STAGE, hue,
                          sat * (0.55 + 0.45 * fill), val * (0.7 + 0.3 * fill),
-                         0.0, i in SOURCES.mock_anomalous_vials)
+                         0.0, i in SOURCES.mock_anomalous_crucibles)
 
-    def _state_in_transit(self, i: int, tau: float) -> VialState | None:
-        """tau = simulated seconds since this vial left the filling rack."""
+    def _state_in_transit(self, i: int, tau: float) -> CrucibleState | None:
+        """tau = simulated seconds since this crucible left the filling rack."""
         origin = self._fill_slots[i]
         elapsed = 0.0
         for k, (stage, dwell) in enumerate(self._dwells.items()):
@@ -195,7 +195,7 @@ class SyntheticPlatform:
 
         Leaving the filling rack is routed out to the transport lane first,
         then along it. A straight line from a rack slot to the conveyor would
-        drive the vial through the slots to its right - two vials sharing the
+        drive the crucible through the slots to its right - two crucibles sharing the
         same pixels, which is not something the real platform does and which
         would make the scene a test of occlusion handling rather than of the
         pipeline.
@@ -212,10 +212,10 @@ class SyntheticPlatform:
         return origin[0] + (target[0] - origin[0]) * g, self._lane_y
 
     def _colour_for_stage(self, i: int, stage: str, progress: float,
-                          x: float, y: float) -> VialState:
+                          x: float, y: float) -> CrucibleState:
         hue, sat, val = self._base_colour(i)
         turb = 0.0
-        anomalous = i in SOURCES.mock_anomalous_vials
+        anomalous = i in SOURCES.mock_anomalous_crucibles
 
         if stage == "lidding":
             val *= 0.97
@@ -239,11 +239,11 @@ class SyntheticPlatform:
             sat -= 55.0 * ramp
             turb = min(1.0, turb + 0.75 * ramp)
 
-        return VialState(i, x, y, stage, hue % 180, np.clip(sat, 0, 255),
+        return CrucibleState(i, x, y, stage, hue % 180, np.clip(sat, 0, 255),
                          np.clip(val, 0, 255), turb, anomalous)
 
     def truth_at(self, t: float) -> dict:
-        """Ground-truth vial geometry, in pixels, for the frame at time t.
+        """Ground-truth crucible geometry, in pixels, for the frame at time t.
 
         Carried on Frame.truth by the simulated backends only. Its single
         purpose is to let GroundTruthLocalizer stand in for a real localiser
@@ -252,7 +252,7 @@ class SyntheticPlatform:
         pipeline may depend on it: a real camera leaves Frame.truth None.
         """
         return {
-            "vials": [
+            "crucibles": [
                 {
                     "index": st.index,
                     "cx": st.x * self.w,
@@ -270,12 +270,12 @@ class SyntheticPlatform:
     def render(self, t: float) -> np.ndarray:
         img = self._background.copy()
         for st in self.states_at(t):
-            self._draw_vial(img, st)
+            self._draw_crucible(img, st)
 
         noise = self._noise_rng.normal(0.0, SOURCES.mock_noise_sigma, img.shape)
         return np.clip(img.astype(np.float32) + noise, 0, 255).astype(np.uint8)
 
-    def _draw_vial(self, img: np.ndarray, st: VialState) -> None:
+    def _draw_crucible(self, img: np.ndarray, st: CrucibleState) -> None:
         cx, cy = int(st.x * self.w), int(st.y * self.h)
         r = self.r_px
         bgr = cv2.cvtColor(

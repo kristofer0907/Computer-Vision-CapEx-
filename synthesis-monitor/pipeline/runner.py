@@ -28,10 +28,10 @@ from drivers.rgb_cam import encode_jpeg
 from pipeline import roi
 from pipeline.detectors import DetectionContext, DetectorHost, ZoneView
 from pipeline.features import FeatureExtractor, create_extractor
-from pipeline.history import VialHistory
+from pipeline.history import CrucibleHistory
 from pipeline.localize import Localizer, create_localizer
 from pipeline.tracking import CadenceController, HungarianTracker, Tracker
-from pipeline.types import Event, PipelineResult, Track, VialReport
+from pipeline.types import Event, PipelineResult, Track, CrucibleReport
 from pipeline.zones import ZoneMap
 
 log = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ class _Timer:
 
 
 class PipelineRunner:
-    """Owns the analysis stages and the per-vial memory between frames."""
+    """Owns the analysis stages and the per-crucible memory between frames."""
 
     def __init__(self,
                  localizer: Localizer | None = None,
@@ -74,14 +74,14 @@ class PipelineRunner:
                  tracker: Tracker | None = None,
                  detectors: DetectorHost | None = None,
                  zone_map: ZoneMap | None = None,
-                 history: VialHistory | None = None,
+                 history: CrucibleHistory | None = None,
                  draw_overlay: bool = True) -> None:
         self.zones = zone_map or ZoneMap()
         self.localizer = localizer or create_localizer()
         self.extractor = extractor or create_extractor()
         self.tracker = tracker or HungarianTracker(self.zones)
         self.detectors = detectors or DetectorHost()
-        self.history = history or VialHistory()
+        self.history = history or CrucibleHistory()
         self.cadence = CadenceController()
         self.draw_overlay = draw_overlay
 
@@ -111,7 +111,7 @@ class PipelineRunner:
                  self.localizer.name, self.extractor.name,
                  ",".join(d.name for d in self.detectors.detectors) or "none")
         if not self.zones.polygons_px:
-            log.warning("no zone polygons - every vial will be unstaged")
+            log.warning("no zone polygons - every crucible will be unstaged")
 
     def stop(self) -> None:
         if not self._started:
@@ -163,7 +163,7 @@ class PipelineRunner:
         if not detections and not self._warned_localizer:
             self._warned_localizer = True
             msg = (f"localizer {self.localizer.name!r} returned no detections - "
-                   "vial localisation is not implemented yet")
+                   "crucible localisation is not implemented yet")
             log.warning(msg)
         if not self.localizer.real_capable and not frame.simulated:
             warnings.append(
@@ -255,15 +255,15 @@ class PipelineRunner:
 
         return PipelineResult(
             frame_id=frame.frame_id, timestamp=now, source=frame.source,
-            simulated=frame.simulated, vials=reports, events=events,
+            simulated=frame.simulated, crucibles=reports, events=events,
             stage_counts=self._stage_counts(confirmed),
             timings_ms=timer.marks, overlay_jpeg=overlay, warnings=warnings,
         )
 
     # --------------------------------------------------------------- helpers
     def _report(self, t: Track, features: dict[str, float],
-                now: float) -> VialReport:
-        return VialReport(
+                now: float) -> CrucibleReport:
+        return CrucibleReport(
             track_id=t.track_id, cx=t.cx, cy=t.cy, radius=t.radius,
             stage=t.stage, hits=t.hits, missed=t.missed, age_s=t.age_s,
             time_in_stage_s=t.time_in_stage_s(now),
@@ -279,7 +279,7 @@ class PipelineRunner:
 
     def _zone_views(self, image: np.ndarray,
                     tracks: list[Track]) -> dict[str, ZoneView]:
-        """One ZoneView per zone, with the vials punched out of the bench mask."""
+        """One ZoneView per zone, with the crucibles punched out of the bench mask."""
         views: dict[str, ZoneView] = {}
         for name in self.zones.names:
             bounds = self.zones.bounds(name)
@@ -302,7 +302,7 @@ class PipelineRunner:
                         now: float) -> list[Event]:
         """Events for tracks that ended. Not a detector - a bookkeeping fact.
 
-        "oven" is recorded as info because it is the normal end of a vial's
+        "oven" is recorded as info because it is the normal end of a crucible's
         visible life. It is an inference from disappearance, not an
         observation: the oven is outside the camera's view. A failure during
         cooling would produce this same event, which is the acknowledged
@@ -313,7 +313,7 @@ class PipelineRunner:
             if t.closed_reason == "oven":
                 out.append(Event(
                     kind="oven_entry_inferred", severity="info",
-                    message=(f"vial {t.track_id} disappeared after cooling - "
+                    message=(f"crucible {t.track_id} disappeared after cooling - "
                              "inferred oven entry (not observed)"),
                     timestamp=now, frame_id=frame_id, track_id=t.track_id,
                     detector="tracker", zone=t.stage,
@@ -338,7 +338,7 @@ class PipelineRunner:
             else:
                 out.append(Event(
                     kind="track_lost", severity="warning",
-                    message=(f"vial {t.track_id} disappeared from "
+                    message=(f"crucible {t.track_id} disappeared from "
                              f"{t.stage or 'an unstaged position'}"),
                     timestamp=now, frame_id=frame_id, track_id=t.track_id,
                     detector="tracker", zone=t.stage,
@@ -350,7 +350,7 @@ class PipelineRunner:
     # --------------------------------------------------------------- overlay
     def _overlay(self, image: np.ndarray, tracks: list[Track],
                  events: list[Event]) -> np.ndarray:
-        """Annotated preview: zones, tracked vials, and anything that fired."""
+        """Annotated preview: zones, tracked crucibles, and anything that fired."""
         out = self.zones.draw(image)
         flagged = {e.track_id: e.severity for e in events if e.track_id is not None}
 

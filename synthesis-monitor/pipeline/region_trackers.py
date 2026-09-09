@@ -19,9 +19,8 @@ process order) within a short time window, instead of that new track getting
 a fresh id.
 
 Independent of pipeline/tracking.py's HungarianTracker on purpose - that
-module's docstring and its DeepSORT-rejection story are specifically about
-the vial-flow model (README.md/CLAUDE.md). This is the real-hardware crucible
-layout: fixed slots, a single-file lane and a small fixed process order,
+module is about free movement across the whole platform. This is the
+real-hardware crucible layout: fixed slots, a single-file lane and a small fixed process order,
 rather than free movement across a whole platform. Different enough problem
 that reusing the name would be more confusing than reusing the code - the two
 modules do share the same Tracker ABC and Track/Detection types, and could be

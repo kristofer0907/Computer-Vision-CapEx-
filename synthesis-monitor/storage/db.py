@@ -1,4 +1,4 @@
-"""SQLite persistence for runs, frames, per-vial rows, events and thermal.
+"""SQLite persistence for runs, frames, per-crucible rows, events and thermal.
 
 Two processes write to this file concurrently - the pipeline and the thermal
 logger - which is why WAL mode and a busy timeout are set on every connection.
@@ -13,7 +13,7 @@ passed across a Queue.
 
 Schema notes:
 
-  * Per-vial features are stored as a JSON blob, not as columns. The feature
+  * Per-crucible features are stored as a JSON blob, not as columns. The feature
     set is not settled and will not be for a while - adding a feature must not
     mean a migration. Query with json_extract() when a specific one is needed;
     SQLite has had it built in since 3.38 and the Pi ships newer.
@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from config import STORAGE
-from pipeline.types import Event, PipelineResult
+from pipeline.types import AnomalyResult, Event, PipelineResult
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS frames (
     run_id      INTEGER NOT NULL REFERENCES runs(id),
     frame_id    INTEGER NOT NULL,
     timestamp   REAL NOT NULL,
-    n_vials     INTEGER NOT NULL,
+    n_crucibles     INTEGER NOT NULL,
     stage_counts TEXT,            -- JSON {stage: count}
     timings_ms   TEXT,            -- JSON {stage: ms}
     warnings     TEXT,            -- JSON [str]
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS frames (
 );
 CREATE INDEX IF NOT EXISTS idx_frames_run_ts ON frames(run_id, timestamp);
 
-CREATE TABLE IF NOT EXISTS vial_samples (
+CREATE TABLE IF NOT EXISTS crucible_samples (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     run_id      INTEGER NOT NULL REFERENCES runs(id),
     frame_row   INTEGER NOT NULL REFERENCES frames(id),
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS vial_samples (
     features    TEXT NOT NULL DEFAULT '{}',   -- JSON {name: number}
     scores      TEXT NOT NULL DEFAULT '{}'    -- JSON {name: number}
 );
-CREATE INDEX IF NOT EXISTS idx_vial_run_track ON vial_samples(run_id, track_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_crucible_run_track ON crucible_samples(run_id, track_id, timestamp);
 
 CREATE TABLE IF NOT EXISTS events (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,6 +118,20 @@ CREATE TABLE IF NOT EXISTS thermal_samples (
     grid        BLOB               -- optional raw 24x32 float32, see log_thermal
 );
 CREATE INDEX IF NOT EXISTS idx_thermal_ts ON thermal_samples(timestamp DESC);
+
+-- The MVP anomaly log. Separate from `events` on purpose: this table is the
+-- one the operator reads, it holds only tripped checks, and its timestamp is
+-- ISO-8601 text because a row is meant to be legible in a sqlite3 shell
+-- without conversion.
+CREATE TABLE IF NOT EXISTS anomaly_events (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp    TEXT NOT NULL,
+    zone         TEXT,
+    failure_type TEXT,
+    tripped      BOOLEAN,
+    frame_ref    TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_anomaly_ts ON anomaly_events(timestamp DESC);
 """
 
 
@@ -216,9 +230,9 @@ class Database:
     # ----------------------------------------------------------- pipeline IO
     def log_result(self, result: PipelineResult,
                    snapshot_path: str | None = None) -> int:
-        """Write one analysis frame, its vials and its events in one transaction.
+        """Write one analysis frame, its crucibles and its events in one transaction.
 
-        One transaction on purpose: a frame row with no vial rows, or events
+        One transaction on purpose: a frame row with no crucible rows, or events
         pointing at a frame that was not written, would both be lies that are
         painful to notice weeks later while reading a run back.
         """
@@ -229,23 +243,23 @@ class Database:
             self.conn.execute("BEGIN")
             try:
                 cur = self.conn.execute(
-                    "INSERT INTO frames(run_id, frame_id, timestamp, n_vials, "
+                    "INSERT INTO frames(run_id, frame_id, timestamp, n_crucibles, "
                     "stage_counts, timings_ms, warnings, snapshot_path) "
                     "VALUES(?,?,?,?,?,?,?,?)",
                     (self.run_id, result.frame_id, result.timestamp,
-                     result.n_vials, _json(result.stage_counts),
+                     result.n_crucibles, _json(result.stage_counts),
                      _json(result.timings_ms), _json(result.warnings),
                      snapshot_path))
                 frame_row = int(cur.lastrowid)
 
                 self.conn.executemany(
-                    "INSERT INTO vial_samples(run_id, frame_row, timestamp, "
+                    "INSERT INTO crucible_samples(run_id, frame_row, timestamp, "
                     "track_id, stage, cx, cy, radius, age_s, time_in_stage_s, "
                     "features, scores) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                     [(self.run_id, frame_row, result.timestamp, v.track_id,
                       v.stage, v.cx, v.cy, v.radius, v.age_s,
                       v.time_in_stage_s, _json(v.features), _json(v.scores))
-                     for v in result.vials])
+                     for v in result.crucibles])
 
                 self._insert_events(result.events)
                 self.conn.execute("COMMIT")
@@ -278,6 +292,28 @@ class Database:
         with self._lock:
             self.conn.execute("UPDATE events SET crop_path=? WHERE id=?",
                               (path, event_id))
+
+    # ------------------------------------------------------------- anomaly IO
+    def write_event(self, result: AnomalyResult) -> int | None:
+        """Write one tripped anomaly check. Untripped checks are dropped.
+
+        Storing every check would write ~6 rows per frame forever to say
+        nothing happened. The absence of a row is the "all clear".
+        """
+        if not result.tripped:
+            return None
+        with self._lock:
+            cur = self.conn.execute(
+                "INSERT INTO anomaly_events(timestamp, zone, failure_type, "
+                "tripped, frame_ref) VALUES(?,?,?,?,?)",
+                (result.timestamp.isoformat(timespec="seconds"), result.zone,
+                 result.failure_type, 1, result.frame_ref))
+        return int(cur.lastrowid)
+
+    def recent_anomalies(self, limit: int = 50) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM anomaly_events ORDER BY id DESC LIMIT ?",
+            (limit,)).fetchall()
 
     # ------------------------------------------------------------- thermal IO
     def log_thermal(self, timestamp: float, frame_id: int, min_c: float,
@@ -327,18 +363,18 @@ class Database:
             d["data"] = {}
         return d
 
-    def vial_series(self, track_id: int, feature: str,
+    def crucible_series(self, track_id: int, feature: str,
                     run_id: int | None = None, limit: int = 500) -> list[dict]:
-        """One feature's history for one vial, oldest first.
+        """One feature's history for one crucible, oldest first.
 
         json_extract does the work in SQLite rather than pulling every blob
-        into Python, which matters once a run has a few hundred thousand vial
+        into Python, which matters once a run has a few hundred thousand crucible
         rows.
         """
         rid = run_id if run_id is not None else self.run_id
         rows = self.conn.execute(
             "SELECT timestamp, stage, json_extract(features, '$.' || ?) AS value "
-            "FROM vial_samples WHERE run_id=? AND track_id=? "
+            "FROM crucible_samples WHERE run_id=? AND track_id=? "
             "ORDER BY timestamp DESC LIMIT ?",
             (feature, rid, track_id, limit)).fetchall()
         return [dict(r) for r in reversed(rows)]
@@ -362,7 +398,7 @@ class Database:
     def counts(self, run_id: int | None = None) -> dict[str, int]:
         rid = run_id if run_id is not None else self.run_id
         out = {}
-        for table in ("frames", "vial_samples", "events", "thermal_samples"):
+        for table in ("frames", "crucible_samples", "events", "thermal_samples"):
             row = self.conn.execute(
                 f"SELECT COUNT(*) AS n FROM {table} WHERE run_id=?", (rid,)
             ).fetchone()
@@ -385,7 +421,7 @@ class Database:
         with self._lock:
             self.conn.execute("BEGIN")
             try:
-                for table in ("vial_samples", "events", "thermal_samples", "frames"):
+                for table in ("crucible_samples", "events", "thermal_samples", "frames"):
                     cur = self.conn.execute(
                         f"DELETE FROM {table} WHERE timestamp < ?", (cutoff,))
                     deleted[table] = cur.rowcount

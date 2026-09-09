@@ -1,18 +1,18 @@
-"""Vial identity across analysis frames.
+"""Crucible identity across analysis frames.
 
-Approach is settled: global Hungarian assignment on ground distance, gated in
-millimetres, with the stage machine running inside zone polygons. DeepSORT was
-evaluated and rejected - its motion model assumes near-continuous frames and
-there are 30-60 seconds between ours, so its appearance-plus-Kalman machinery
-would be predicting from a state that is already meaningless. Do not
-reintroduce it.
+Approach is settled: global assignment on ground distance, gated in
+millimetres, with the stage machine running inside zone polygons. Appearance-
+plus-Kalman trackers were evaluated and rejected - their motion models assume
+near-continuous frames and there are 30-60 seconds between ours, so they would
+be predicting from a state that is already meaningless. Settled; do not
+reopen.
 
 The Tracker ABC exists so that decision stays reversible for a *different*
 reason: if the platform ever gets a continuous-video zone, that zone can run a
 different Tracker implementation without the rest of the pipeline noticing.
 
-No detection logic here. This module answers "which vial is this", never
-"is this vial in trouble".
+No detection logic here. This module answers "which crucible is this", never
+"is this crucible in trouble".
 """
 
 from __future__ import annotations
@@ -53,10 +53,10 @@ class Tracker(ABC):
 
 
 class HungarianTracker(Tracker):
-    """Global nearest-vial assignment with a physical-plausibility gate.
+    """Global nearest-crucible assignment with a physical-plausibility gate.
 
     Cost is ground distance in millimetres. Anything beyond the gate is not
-    matched at all: at the slow cadence a vial can legitimately cross most of
+    matched at all: at the slow cadence a crucible can legitimately cross most of
     the platform between frames, but it cannot appear on the other side of a
     zone it never entered, and a gate in mm is the only honest way to say so.
     """
@@ -88,9 +88,9 @@ class HungarianTracker(Tracker):
     def set_gate_mm(self, gate_mm: float) -> None:
         """Tighten the gate when the cadence speeds up.
 
-        At the 10 s conveyor cadence a vial covers roughly a quarter of what
+        At the 10 s conveyor cadence a crucible covers roughly a quarter of what
         it can cover in 45 s, so keeping the slow gate would let the solver
-        cheerfully swap two neighbouring vials' identities.
+        cheerfully swap two neighbouring crucibles' identities.
         """
         self.gate_mm = gate_mm
 
@@ -138,7 +138,7 @@ class HungarianTracker(Tracker):
         track.confirmed = self.min_hits <= 1
         # A brand-new track commits its first stage immediately. Hysteresis
         # guards against flapping between stages, not against the initial
-        # observation, and making a vial wait N frames for its first stage
+        # observation, and making a crucible wait N frames for its first stage
         # would leave it unstaged through most of a short zone.
         stage = self.zones.zone_at(track.cx, track.cy)
         if stage is not None:
@@ -206,7 +206,7 @@ def create_tracker(name: str = "auto", frame_size: tuple[int, int] | None = None
                    zone_map: ZoneMap | None = None) -> Tracker:
     """Build a tracker by name, mirroring pipeline.localize.create_localizer.
 
-    "auto" stays HungarianTracker: the vial-flow model is what the simulator
+    "auto" stays HungarianTracker: the crucible-flow model is what the simulator
     and every existing test drive, and changing that silently would swap the
     behaviour of every caller that did not ask for it.
 
@@ -216,7 +216,7 @@ def create_tracker(name: str = "auto", frame_size: tuple[int, int] | None = None
     raise FileNotFoundError at start() without them.
     """
     key = (name or "auto").lower()
-    if key in ("auto", "hungarian", "vial"):
+    if key in ("auto", "hungarian", "crucible"):
         return HungarianTracker(zone_map)
     if key in ("region", "crucible", "zones"):
         # Imported here, not at module level: pipeline.region_trackers imports

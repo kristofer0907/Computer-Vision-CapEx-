@@ -8,7 +8,7 @@ Two kinds of setting live in this file and they are NOT equivalent:
     real decisions and are safe to trust.
   * Detection values (anything under DETECTION). These are placeholders with
     no empirical basis. HSV/texture thresholds and anomaly scoring cannot be
-    pre-tuned without real captured vial images — they are here so the
+    pre-tuned without real captured crucible images — they are here so the
     detector modules have somewhere to read from, not because the numbers
     mean anything yet.
 """
@@ -50,16 +50,16 @@ class GeometryConfig:
     frame_width_px: int = 4056
     frame_height_px: int = 3040
     horizontal_coverage_mm: float = 1021.0
-    vial_diameter_mm: float = 27.0
-    n_vials: int = 18
+    crucible_diameter_mm: float = 27.0
+    n_crucibles: int = 18
 
     @property
     def px_per_mm(self) -> float:
         return self.frame_width_px / self.horizontal_coverage_mm
 
     @property
-    def vial_radius_px(self) -> float:
-        return 0.5 * self.vial_diameter_mm * self.px_per_mm
+    def crucible_radius_px(self) -> float:
+        return 0.5 * self.crucible_diameter_mm * self.px_per_mm
 
     @property
     def platform_band_px(self) -> tuple[int, int]:
@@ -96,10 +96,10 @@ STAGE_ORDER: tuple[str, ...] = (
 
 ZONES_FILE = DATA_DIR / "zones.json"
 
-# Hand-marked vial positions, produced by tools/mark_vials.py and read by
+# Hand-marked crucible positions, produced by tools/mark_vials.py and read by
 # pipeline.localize.ManualLocalizer. Lets a folder of real captured images run
 # through the whole pipeline before a real localiser exists.
-VIALS_FILE = Path(os.environ.get("CAPEX_VIALS_FILE", DATA_DIR / "vials.json"))
+CRUCIBLES_FILE = Path(os.environ.get("CAPEX_CRUCIBLES_FILE", DATA_DIR / "vials.json"))
 
 
 def _load_polygons() -> dict[str, list[tuple[float, float]]]:
@@ -161,7 +161,7 @@ class SourceConfig:
 
     # Mock scene behaviour
     mock_time_scale: float = 12.0        # 1 real second = 12 simulated seconds
-    mock_anomalous_vials: tuple[int, ...] = (7,)
+    mock_anomalous_crucibles: tuple[int, ...] = (7,)
     mock_noise_sigma: float = 3.0
 
     # Real hardware
@@ -241,13 +241,13 @@ QUEUES = QueueConfig()
 class TrackingConfig:
     """Hungarian assignment within zone polygons.
 
-    DeepSORT was evaluated and rejected: its motion model assumes near
+    Motion-model trackers were evaluated and rejected: they assume near
     continuous frames and there is a 30-60 s gap between ours. Gating is
     therefore done in millimetres of platform, not in pixels of predicted
     motion.
     """
 
-    # Maximum plausible displacement between two analysis frames. A vial on
+    # Maximum plausible displacement between two analysis frames. A crucible on
     # the conveyor covers the ~250 mm from lidding to heating in one slow
     # frame, so the gate has to be generous or every handover breaks the ID.
     max_assignment_mm: float = 320.0
@@ -255,12 +255,12 @@ class TrackingConfig:
     max_assignment_busy_mm: float = 90.0
 
     # A track survives this many consecutive analysis frames without a
-    # detection before it is closed. Covers a vial briefly occluded by the
+    # detection before it is closed. Covers a crucible briefly occluded by the
     # lidding head, and the dim ~180 mm the LED panel does not cover.
     max_missed_frames: int = 3
 
-    # Frames a track must be seen in before it is published as a real vial.
-    # Suppresses one-frame localisation noise from creating ghost vials.
+    # Frames a track must be seen in before it is published as a real crucible.
+    # Suppresses one-frame localisation noise from creating ghost crucibles.
     min_hits_to_confirm: int = 2
 
     # Hysteresis: consecutive frames a track must read as a new stage before
@@ -284,7 +284,7 @@ TRACKING = TrackingConfig()
 
 # --------------------------------------------------------------------------
 # Region tracking -- real-hardware crucible zones (storing/injection/heating/
-# collection), independent of the vial-flow TrackingConfig above.
+# collection), independent of the crucible-flow TrackingConfig above.
 # PLACEHOLDER VALUES pending real captured sequences to tune against, same
 # caveat as TRACKING.stage_hysteresis_n.
 # --------------------------------------------------------------------------
@@ -349,7 +349,7 @@ class RegionTrackingConfig:
     handoff_heater_slot: int = 1
 
     # A heater slot that stays occupied but whose detection jumps further
-    # than this is treated as a different vial, not the same one wobbling.
+    # than this is treated as a different crucible, not the same one wobbling.
     # A swap between two captures never shows the slot empty, so occupancy
     # alone cannot see it - but a replaced jar does not land back on the same
     # pixels. Measured on capture/tracking_practice: an untouched jar moved
@@ -357,7 +357,7 @@ class RegionTrackingConfig:
     # the slot being worked moved 4.24-28.79 px, 14+ on four of five steps.
     # 12 px sits above the detector's own noise on a static jar and below a
     # typical replacement. The two ranges do overlap, so a slow careful swap
-    # can still pass as one vial - this narrows the blind spot rather than
+    # can still pass as one crucible - this narrows the blind spot rather than
     # closing it.
     heater_replacement_move_px: float = 12.0
 
@@ -397,7 +397,7 @@ class StorageConfig:
     snapshot_every_n_frames: int = 4
     snapshot_jpeg_quality: int = 85
 
-    # Per-vial crops are what the colour-change comparison needs to diff
+    # Per-crucible crops are what the colour-change comparison needs to diff
     # against. Kept in memory by pipeline.history; written to disk only when
     # an event fires, so a normal run does not fill the SD card.
     save_crop_on_event: bool = True
@@ -422,8 +422,9 @@ class DetectionConfig:
 
     # Which detector modules pipeline.detectors loads. Names match the
     # `name` attribute on each Detector subclass.
-    enabled: tuple[str, ...] = ("turbidity", "solgel", "color_change",
-                                "spill", "vial_presence")
+    enabled: tuple[str, ...] = ("missing_lid", "turbidity",
+                                "sol_gel_transition", "color_change", "spill",
+                                "missing_crucible", "misplaced_labware")
 
     # pipeline.features.lid_score() at or above this reads as a lid.
     # UNLIKE the rest of this dataclass this one IS calibrated: swept against
@@ -440,20 +441,20 @@ class DetectionConfig:
     lid_score_threshold: float = 55.7
 
     # Size of the square crop taken around each tracked centroid, as a
-    # multiple of the vial radius. 2.0 would be exactly the rim; the margin
+    # multiple of the crucible radius. 2.0 would be exactly the rim; the margin
     # keeps the rim and a little bench either side inside the crop.
     roi_scale: float = 2.6
 
-    # How many past analysis frames of per-vial features are retained in
+    # How many past analysis frames of per-crucible features are retained in
     # memory for temporal comparisons.
     history_length: int = 40
 
-    # Crops retained per vial for the previous-image comparison.
+    # Crops retained per crucible for the previous-image comparison.
     crop_history_length: int = 4
 
     # Placeholder scoring knobs, unused until the detectors are written.
     robust_z_threshold: float = 3.5
-    min_vials_for_batch_stats: int = 5
+    min_crucibles_for_batch_stats: int = 5
 
 
 DETECTION = DetectionConfig()

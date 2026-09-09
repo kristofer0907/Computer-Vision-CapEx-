@@ -6,7 +6,7 @@ functions that keeps needing. If you would rather write your own, delete the
 file; nothing breaks.
 
 Median and MAD rather than mean and standard deviation, for a specific
-reason: with 18 samples, a single genuinely failed vial moves the mean and
+reason: with 18 samples, a single genuinely failed crucible moves the mean and
 inflates the standard deviation enough to hide itself. That is the failure
 mode being guarded against, so the estimator has to be one the outlier cannot
 influence.
@@ -52,8 +52,8 @@ def robust_z(values, min_n: int = 5, floor: float = 1e-9) -> list[float]:
     answer is "no evidence of divergence", not a divide-by-zero or an
     infinite score.
 
-    min_n exists because a median over three vials is not a batch consensus.
-    DETECTION.min_vials_for_batch_stats is the project's value for it.
+    min_n exists because a median over three crucibles is not a batch consensus.
+    DETECTION.min_crucibles_for_batch_stats is the project's value for it.
     """
     arr = np.asarray(list(values), dtype=np.float64)
     if arr.size == 0:

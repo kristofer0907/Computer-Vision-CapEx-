@@ -165,12 +165,12 @@ def slot_positions(coord: RegionCoordinator, zone: str) -> dict[int, tuple[float
             if t.slot_id is not None}
 
 
-def short_vial_id(vial_id: str | None) -> str:
+def short_vial_id(crucible_id: str | None) -> str:
     """Trim an id to something that fits under a crucible: the last four
     digits of its timestamp, which are unique enough to follow by eye."""
-    if not vial_id:
+    if not crucible_id:
         return ""
-    return f"#{vial_id.rsplit('-', 1)[-1][-4:]}"
+    return f"#{crucible_id.rsplit('-', 1)[-1][-4:]}"
 
 
 def track_label(track_id: int) -> str:
@@ -257,26 +257,26 @@ def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
             # The id goes inside the disc and the zone just under it: slots
             # sit ~140 px apart, so a wide label above each one collides with
             # its neighbour's.
-            vial_id = None
+            crucible_id = None
             if handoff is not None and t.slot_id is not None:
                 if (zone == REGION_TRACKING.heater_zone
                         and t.slot_id == handoff.heater_slot):
-                    vial_id = handoff.held_id
+                    crucible_id = handoff.held_id
                 elif zone == REGION_TRACKING.cooling_zone:
-                    vial_id = handoff.storage_ids.get(t.slot_id)
-            if vial_id is None and lineage is not None and t.slot_id is not None:
+                    crucible_id = handoff.storage_ids.get(t.slot_id)
+            if crucible_id is None and lineage is not None and t.slot_id is not None:
                 if zone == REGION_TRACKING.heater_zone:
-                    vial_id = lineage.vial_on_heater(t.slot_id)
+                    crucible_id = lineage.vial_on_heater(t.slot_id)
                 elif zone == REGION_TRACKING.cooling_zone:
-                    vial_id = lineage.vial_on_cooling(t.slot_id)
+                    crucible_id = lineage.vial_on_cooling(t.slot_id)
 
             # Where a handoff id exists it IS the identity, so it takes the
             # centre. The SlotTracker number is keyed to the slot, not the
             # crucible - on a heater it stays put across a replacement, which
             # is exactly the thing being corrected, so showing it as the
             # headline number contradicts the mechanism underneath it.
-            if vial_id:
-                headline = short_vial_id(vial_id)
+            if crucible_id:
+                headline = short_vial_id(crucible_id)
             else:
                 headline = track_label(t.track_id)
 

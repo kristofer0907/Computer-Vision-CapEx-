@@ -6,9 +6,9 @@ has no opinion about what is in them.
 
 Two shapes of ROI exist because the detection plans need both:
 
-  * per-vial crops, for turbidity / sol-gel / colour change,
+  * per-crucible crops, for turbidity / sol-gel / colour change,
   * per-zone crops, for spill and overflow, where the interesting surface is
-    the aluminium bench or the filter paper *between* the vials, not a vial.
+    the aluminium bench or the filter paper *between* the crucibles, not a crucible.
 """
 
 from __future__ import annotations
@@ -38,11 +38,11 @@ def square_box(cx: float, cy: float, radius: float,
 
 def crop(image: np.ndarray, cx: float, cy: float, radius: float,
          scale: float | None = None) -> tuple[np.ndarray, tuple[int, int, int, int]]:
-    """Crop around a vial. Returns (view, clipped box).
+    """Crop around a crucible. Returns (view, clipped box).
 
     The returned array is a *view* into `image`, not a copy - cheap, but it
     means writing to it edits the frame. Call .copy() before drawing on it.
-    A vial near the frame edge yields a smaller-than-nominal crop rather than
+    A crucible near the frame edge yields a smaller-than-nominal crop rather than
     a padded one, so anything that compares two crops must not assume they
     are the same size.
     """
@@ -53,7 +53,7 @@ def crop(image: np.ndarray, cx: float, cy: float, radius: float,
 
 def disc_mask(shape: tuple[int, int], cx: float, cy: float, radius: float,
               shrink_px: float = 2.0) -> np.ndarray:
-    """uint8 mask, 255 inside the vial's liquid disc.
+    """uint8 mask, 255 inside the crucible's liquid disc.
 
     `shrink_px` pulls the mask inside the glass rim. Sampling the rim itself
     would mix the glass wall, the meniscus and any surviving specular
@@ -87,10 +87,10 @@ def zone_crop(image: np.ndarray, bounds: tuple[int, int, int, int]
 def exclude_discs(mask: np.ndarray, centers: list[tuple[float, float, float]],
                   origin: tuple[int, int] = (0, 0),
                   pad_px: float = 3.0) -> np.ndarray:
-    """Punch the vials out of a zone mask, leaving only the bench surface.
+    """Punch the crucibles out of a zone mask, leaving only the bench surface.
 
     This is what a spill check wants: the aluminium (or the filter paper) with
-    the vials that legitimately sit on it removed, so a vial's own colour
+    the crucibles that legitimately sit on it removed, so a crucible's own colour
     cannot be mistaken for a wet patch. `centers` is (cx, cy, radius) in frame
     coordinates; `origin` is the crop's top-left in the same frame.
     """
@@ -105,8 +105,8 @@ def exclude_discs(mask: np.ndarray, centers: list[tuple[float, float, float]],
 def resize_like(image: np.ndarray, reference: np.ndarray) -> np.ndarray:
     """Resize `image` to `reference`'s height and width.
 
-    Needed before differencing two crops of the same vial from different
-    frames: the crops are clipped independently, so a vial that moved towards
+    Needed before differencing two crops of the same crucible from different
+    frames: the crops are clipped independently, so a crucible that moved towards
     the frame edge produces a smaller box and a raw cv2.absdiff would throw.
     """
     if image.shape[:2] == reference.shape[:2]:

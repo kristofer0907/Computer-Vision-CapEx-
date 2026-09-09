@@ -33,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--localizer", default="auto")
     p.add_argument("--extractor", default="auto")
     p.add_argument("--tracker", default="auto",
-                   help="auto (vial-flow Hungarian) | region (per-zone crucible "
+                   help="auto (crucible-flow Hungarian) | region (per-zone crucible "
                         "slot + FIFO lane tracking, needs the hand-marked "
                         "layouts from tools/mark_slots.py)")
     p.add_argument("--interval", type=float, default=0.0,
@@ -103,8 +103,8 @@ def main(argv: list[str] | None = None) -> int:
 
             if not args.events_only or result.events:
                 stages = " ".join(f"{k}={v}" for k, v in result.stage_counts.items() if v)
-                log.info("frame %-4d  vials=%-3d %s  next=%.0fs  %s",
-                         result.frame_id, result.n_vials, stages or "-",
+                log.info("frame %-4d  crucibles=%-3d %s  next=%.0fs  %s",
+                         result.frame_id, result.n_crucibles, stages or "-",
                          runner.next_interval_s,
                          " ".join(f"{k}:{v}ms" for k, v in result.timings_ms.items()))
             for e in result.events:

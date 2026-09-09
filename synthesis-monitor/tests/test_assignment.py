@@ -18,7 +18,7 @@ def test_beats_greedy():
 
     Optimal takes 2 + 3 = 5. This is the whole reason for not writing three
     lines of nearest-neighbour matching instead - and it is not a contrived
-    case: it is two vials whose paths cross on the conveyor.
+    case: it is two crucibles whose paths cross on the conveyor.
     """
     cost = np.array([[1.0, 2.0], [3.0, 100.0]])
     assert hungarian(cost) == [(0, 1), (1, 0)]

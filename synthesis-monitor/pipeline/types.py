@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 # --------------------------------------------------------------------------
@@ -28,7 +29,7 @@ def severity_rank(name: str) -> int:
 
 @dataclass(frozen=True)
 class Detection:
-    """One candidate vial in one frame, in pixel coordinates.
+    """One candidate crucible in one frame, in pixel coordinates.
 
     This is the localiser's output and the tracker's input. It carries no
     identity: assigning identity across frames is the tracker's job.
@@ -39,7 +40,7 @@ class Detection:
     radius: float
     confidence: float = 1.0
     # Free-form, for whatever the localiser wants to pass through
-    # (contour area, YOLO class, circularity...).
+    # (contour area, circularity, Hough accumulator score...).
     meta: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -55,7 +56,7 @@ class Detection:
 
 @dataclass
 class Track:
-    """A vial followed across analysis frames.
+    """A crucible followed across analysis frames.
 
     Mutable by design - the tracker updates it in place. `stage` is the
     committed stage; `pending_stage`/`pending_count` are the hysteresis
@@ -126,9 +127,25 @@ class Event:
                 f"unknown severity {self.severity!r}, expected one of {SEVERITIES}")
 
 
+@dataclass(frozen=True)
+class AnomalyResult:
+    """One anomaly check's verdict for one zone in one frame.
+
+    Deliberately carries no crucible id. A check answers "is this zone wrong",
+    and the human opens `frame_ref` to see which crucible - which is cheaper
+    and more honest than an id the localiser cannot reliably supply yet.
+    """
+
+    tripped: bool
+    zone: str
+    failure_type: str
+    timestamp: datetime
+    frame_ref: str
+
+
 @dataclass
-class VialReport:
-    """Per-vial state published for one analysis frame.
+class CrucibleReport:
+    """Per-crucible state published for one analysis frame.
 
     This is what the dashboard renders and what storage writes as a row.
     `features` is whatever pipeline.features returned - it is passed through
@@ -147,7 +164,7 @@ class VialReport:
     time_in_stage_s: float | None
     features: dict[str, float] = field(default_factory=dict)
     # Filled by detectors that want to attach a score without raising an
-    # event, e.g. a per-vial anomaly score that is below threshold.
+    # event, e.g. a per-crucible anomaly score that is below threshold.
     scores: dict[str, float] = field(default_factory=dict)
 
 
@@ -159,7 +176,7 @@ class PipelineResult:
     timestamp: float
     source: str
     simulated: bool
-    vials: list[VialReport] = field(default_factory=list)
+    crucibles: list[CrucibleReport] = field(default_factory=list)
     events: list[Event] = field(default_factory=list)
     # stage name -> number of confirmed tracks currently in it
     stage_counts: dict[str, int] = field(default_factory=dict)
@@ -172,8 +189,8 @@ class PipelineResult:
     warnings: list[str] = field(default_factory=list)
 
     @property
-    def n_vials(self) -> int:
-        return len(self.vials)
+    def n_crucibles(self) -> int:
+        return len(self.crucibles)
 
     def worst_severity(self) -> str | None:
         if not self.events:

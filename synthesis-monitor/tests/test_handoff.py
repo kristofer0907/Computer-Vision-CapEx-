@@ -19,19 +19,19 @@ def test_a_crucible_on_the_heater_picks_up_an_id():
     assert h.held_id is None
 
     h.update(True, store(), 130.0)
-    assert h.held_id == "vial-130000"
+    assert h.held_id == "crucible-130000"
 
 
 def test_the_next_storage_arrival_inherits_that_id():
     h = HeaterHandoff(heater_slot=1)
     h.update(True, store(), 100.0)
-    vial = h.held_id
+    crucible = h.held_id
 
     h.update(False, store(2), 130.0)
-    assert h.storage_ids == {2: vial}
+    assert h.storage_ids == {2: crucible}
     assert h.held_id is None
     (rec,) = h.records
-    assert rec.vial_id == vial and rec.storage_slot == 2
+    assert rec.crucible_id == crucible and rec.storage_slot == 2
 
 
 def test_a_replacement_that_never_leaves_the_slot_empty_still_works():
@@ -64,7 +64,7 @@ def test_a_run_of_arrivals_each_take_the_current_heater_id():
         filled.append(i)
         h.update(True, store(*filled), 115.0 + 30 * i)
     assert len(h.records) == 4
-    assert [r.vial_id for r in h.records] == seen
+    assert [r.crucible_id for r in h.records] == seen
     assert len({r.storage_slot for r in h.records}) == 4
 
 
@@ -89,12 +89,12 @@ def test_the_id_survives_the_heater_going_empty_before_the_arrival():
     """Lifted off on one frame, put down in storage on a later one."""
     h = HeaterHandoff(heater_slot=1)
     h.update(True, store(), 100.0)
-    vial = h.held_id
+    crucible = h.held_id
     h.update(False, store(), 130.0)      # in transit, nothing anywhere
-    assert h.held_id == vial
+    assert h.held_id == crucible
 
     h.update(False, store(0), 160.0)
-    assert h.storage_ids[0] == vial
+    assert h.storage_ids[0] == crucible
 
 
 def test_removing_something_from_storage_drops_its_label():

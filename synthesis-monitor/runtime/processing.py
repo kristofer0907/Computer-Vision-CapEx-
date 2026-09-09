@@ -1,8 +1,7 @@
 """Processing process: runs the pipeline, persists the result, publishes it.
 
 Separate from capture for one reason that matters and one that will: the
-pipeline's cost is unbounded (a YOLO forward pass, if that route wins, is
-seconds on a Pi 5 CPU) and the preview must stay smooth regardless. Running
+pipeline's cost is unbounded and the preview must stay smooth regardless. Running
 them in one process would mean every analysis frame visibly stalls the live
 view, and on a shared GIL even threads would not fix it.
 
@@ -185,10 +184,10 @@ def _persist(db, snapshots, runner, result, frame, processed: int,
 
 
 def _save_event_crops(snapshots, runner, result, frame) -> dict[int, str]:
-    """One close-up per flagged vial: the picture the event was raised on.
+    """One close-up per flagged crucible: the picture the event was raised on.
 
     Only for warning and above - info events include every normal oven entry,
-    and writing an image for each of those would be one file per vial per run
+    and writing an image for each of those would be one file per crucible per run
     for no benefit.
     """
     from pipeline import roi
@@ -199,10 +198,10 @@ def _save_event_crops(snapshots, runner, result, frame) -> dict[int, str]:
             continue
         if severity_rank(event.severity) < severity_rank("warning"):
             continue
-        vial = next((v for v in result.vials if v.track_id == event.track_id), None)
-        if vial is None:
+        crucible = next((v for v in result.crucibles if v.track_id == event.track_id), None)
+        if crucible is None:
             continue
-        crop, _ = roi.crop(frame.image, vial.cx, vial.cy, vial.radius)
+        crop, _ = roi.crop(frame.image, crucible.cx, crucible.cy, crucible.radius)
         if crop.size == 0:
             continue
         path = snapshots.save_crop(crop, frame.frame_id, event.track_id,

@@ -41,7 +41,7 @@ Output (data/slots_<stage>.json by default):
 
 Why this exists: mirrors tools/mark_vials.py, but for the *fixed* slot
 layout (crucible rack holes, lidding stations, etc.) rather than per-frame
-vial detections - a one-time reference to check live detections against,
+crucible detections - a one-time reference to check live detections against,
 not something re-marked every capture.
 
 --lane switches to a second mode for a region with no fixed slots at all: a

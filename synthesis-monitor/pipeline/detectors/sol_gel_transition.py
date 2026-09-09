@@ -3,16 +3,16 @@
 Plan on record: same approach as turbidity - batch-median comparison.
 
 The one structural difference from turbidity is worth building around: a
-sol-gel transition is expected. Every vial in the batch is supposed to gel.
-The anomaly is not "this vial gelled", it is "this vial gelled early, late, or
+sol-gel transition is expected. Every crucible in the batch is supposed to gel.
+The anomaly is not "this crucible gelled", it is "this crucible gelled early, late, or
 not at all relative to its peers", which makes this a comparison of *timing*
 rather than of instantaneous state.
 
 That means the useful comparison is probably over trajectories, not values:
 
-    ctx.history.series(tid, "<key>")   the vial's own trajectory, oldest first
+    ctx.history.series(tid, "<key>")   the crucible's own trajectory, oldest first
     ctx.feature_column("<key>", stage) the batch's current values
-    track.time_in_stage_s()            how long this vial has been where it is
+    track.time_in_stage_s()            how long this crucible has been where it is
     track.stage_log                    every committed stage transition, with
                                        timestamps, so elapsed time since a
                                        specific stage began is available
@@ -33,6 +33,6 @@ from __future__ import annotations
 from pipeline.detectors.base import NotImplementedDetector
 
 
-class SolGelDetector(NotImplementedDetector):
-    name = "solgel"
+class SolGelTransitionDetector(NotImplementedDetector):
+    name = "sol_gel_transition"
     description = "Liquid-to-solid transition timing versus the batch"

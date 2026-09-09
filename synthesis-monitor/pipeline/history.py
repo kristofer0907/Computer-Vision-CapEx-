@@ -1,9 +1,9 @@
-"""Per-vial memory across analysis frames.
+"""Per-crucible memory across analysis frames.
 
 Two things are kept, both bounded:
 
   * a rolling window of past feature dicts, for temporal comparisons,
-  * a rolling window of past crops, so a detector can diff a vial against a
+  * a rolling window of past crops, so a detector can diff a crucible against a
     picture of *itself* from earlier rather than against its neighbours.
 
 The crop cache is here because the colour-change plan needs exactly it: cache
@@ -11,7 +11,7 @@ the previous close-up of that beaker, compare the new one against it. Holding
 the images in the processing process and only writing them to disk when
 something fires keeps a normal 30-day run from filling the SD card.
 
-Memory cost is bounded and worth stating: 18 vials x 4 crops x roughly
+Memory cost is bounded and worth stating: 18 crucibles x 4 crops x roughly
 (2.6 * 34 px)^2 * 3 bytes is about half a megabyte. Raising
 DETECTION.crop_history_length scales that linearly.
 
@@ -28,7 +28,7 @@ from config import DETECTION
 from pipeline.roi import resize_like
 
 
-class VialHistory:
+class CrucibleHistory:
     """Bounded per-track history of features and crops."""
 
     def __init__(self, feature_len: int | None = None,
@@ -58,7 +58,7 @@ class VialHistory:
             ).append((timestamp, np.ascontiguousarray(crop)))
 
     def forget(self, track_id: int) -> None:
-        """Drop a finished vial. Called when a track closes."""
+        """Drop a finished crucible. Called when a track closes."""
         self._features.pop(track_id, None)
         self._crops.pop(track_id, None)
 
@@ -68,7 +68,7 @@ class VialHistory:
 
     # ------------------------------------------------------------- reading
     def features(self, track_id: int) -> list[tuple[float, dict[str, float]]]:
-        """Every retained feature dict for a vial, oldest first."""
+        """Every retained feature dict for a crucible, oldest first."""
         return list(self._features.get(track_id, ()))
 
     def last_features(self, track_id: int, back: int = 1
@@ -86,7 +86,7 @@ class VialHistory:
 
     def last_crop(self, track_id: int, back: int = 1
                   ) -> tuple[float, np.ndarray] | None:
-        """The Nth-most-recent crop of a vial, 1 = the previous frame."""
+        """The Nth-most-recent crop of a crucible, 1 = the previous frame."""
         window = self._crops.get(track_id)
         if not window or len(window) < back:
             return None
@@ -96,9 +96,9 @@ class VialHistory:
                               ) -> np.ndarray | None:
         """The previous crop, resized to `current` so the two can be diffed.
 
-        Crops are clipped independently at the frame edge and a vial's
+        Crops are clipped independently at the frame edge and a crucible's
         apparent radius wobbles slightly between frames, so two crops of the
-        same vial are frequently a pixel or two different in size. Resizing
+        same crucible are frequently a pixel or two different in size. Resizing
         here means no caller has to remember that.
         """
         prev = self.last_crop(track_id)

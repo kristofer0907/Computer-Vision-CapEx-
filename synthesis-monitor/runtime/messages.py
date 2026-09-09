@@ -36,7 +36,7 @@ class ThermalMessage:
     """A colourised thermal JPEG and the three numbers worth displaying.
 
     Passive logging only: no model, no algorithm and no part of the anomaly
-    logic runs on thermal data. At 2.4 cm/px a vial is one or two pixels.
+    logic runs on thermal data. At 2.4 cm/px a crucible is one or two pixels.
     """
 
     jpeg: bytes

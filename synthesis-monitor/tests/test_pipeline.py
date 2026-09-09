@@ -44,29 +44,29 @@ def test_processes_a_frame(camera, runner):
     assert "localize" in result.timings_ms
 
 
-def test_finds_and_confirms_vials(camera, runner):
+def test_finds_and_confirms_crucibles(camera, runner):
     for _ in range(3):
         result = runner.process(camera.capture())
-    assert result.n_vials > 0
-    assert all(v.radius > 0 for v in result.vials)
+    assert result.n_crucibles > 0
+    assert all(v.radius > 0 for v in result.crucibles)
 
 
 def test_ids_are_stable_across_frames(camera, runner):
     seen = []
     for _ in range(5):
         result = runner.process(camera.capture())
-        seen.append({v.track_id for v in result.vials})
-    # The first vials tracked must still be tracked at the end - the batch is
+        seen.append({v.track_id for v in result.crucibles})
+    # The first crucibles tracked must still be tracked at the end - the batch is
     # stationary in filling for most of a run, so churn here means the gate
     # or the assignment is wrong.
     assert seen[1] & seen[-1]
 
 
-def test_vials_get_staged(camera, runner):
+def test_crucibles_get_staged(camera, runner):
     for _ in range(4):
         result = runner.process(camera.capture())
-    stages = {v.stage for v in result.vials}
-    assert stages - {None}, "no vial landed in any zone polygon"
+    stages = {v.stage for v in result.crucibles}
+    assert stages - {None}, "no crucible landed in any zone polygon"
     assert sum(result.stage_counts.values()) > 0
 
 
@@ -77,7 +77,7 @@ def test_null_localizer_yields_an_empty_but_valid_result(camera):
     runner.start()
     try:
         result = runner.process(camera.capture())
-        assert result.n_vials == 0
+        assert result.n_crucibles == 0
         assert result.events == []
         assert result.stage_counts  # keys present, all zero
     finally:
@@ -99,8 +99,10 @@ def test_overlay_is_encoded_jpeg(camera):
 def test_stub_detectors_all_load_and_produce_nothing():
     detectors = load_detectors()
     assert {d.name for d in detectors} == {
-        "turbidity", "solgel", "color_change", "spill", "vial_presence"}
-    assert all(not d.implemented for d in detectors)
+        "turbidity", "sol_gel_transition", "color_change", "spill",
+        "missing_crucible", "misplaced_labware", "missing_lid"}
+    # missing_lid is the one that actually looks at pixels.
+    assert {d.name for d in detectors if d.implemented} == {"missing_lid"}
 
 
 def test_unknown_detector_is_a_hard_error():
@@ -176,7 +178,7 @@ def test_a_raising_extractor_does_not_stop_the_frame(camera):
     try:
         for _ in range(2):
             result = runner.process(camera.capture())
-        assert result.n_vials > 0
+        assert result.n_crucibles > 0
         assert any("nope" in w for w in result.warnings)
     finally:
         runner.stop()
@@ -219,7 +221,7 @@ def test_context_carries_crops_masks_and_zones(camera):
 
     view = next(iter(ctx.zones.values()))
     assert view.bench_mask.shape == view.zone_mask.shape
-    assert view.bench_mask.sum() <= view.zone_mask.sum(), "vials must be punched out"
+    assert view.bench_mask.sum() <= view.zone_mask.sum(), "crucibles must be punched out"
     assert any(e.kind == "test" for e in result.events)
 
 
@@ -233,7 +235,7 @@ def test_previous_crop_is_available_and_size_matched(camera):
         first = runner.process(camera.capture())
         # Nothing is confirmed on frame 1 (min_hits_to_confirm), so there is
         # nothing to have a previous crop of yet.
-        assert first.n_vials == 0
+        assert first.n_crucibles == 0
         for _ in range(3):
             runner.process(camera.capture())
     finally:
@@ -286,7 +288,7 @@ def test_history_records_features_over_time(camera):
     try:
         for _ in range(4):
             result = runner.process(camera.capture())
-        tid = result.vials[0].track_id
+        tid = result.crucibles[0].track_id
         assert len(runner.history.series(tid, "n")) >= 2
     finally:
         runner.stop()
@@ -324,7 +326,7 @@ def test_scene_renders_against_arbitrary_zone_sets(monkeypatch, polygons):
     platform = scene.SyntheticPlatform()
     image = platform.render(120.0)
     assert image.shape[2] == 3
-    assert platform.truth_at(120.0)["vials"], "vials must still be placed"
+    assert platform.truth_at(120.0)["crucibles"], "crucibles must still be placed"
 
 
 # --------------------------------------------------------------------------

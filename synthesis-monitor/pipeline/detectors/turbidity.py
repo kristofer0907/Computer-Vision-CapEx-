@@ -1,14 +1,14 @@
 """Turbidity.  ***YOURS TO IMPLEMENT.***
 
-Plan on record: batch-median comparison. The 18 vials run the same protocol in
-parallel, so the batch is its own ground truth and a vial that diverges
+Plan on record: batch-median comparison. The 18 crucibles run the same protocol in
+parallel, so the batch is its own ground truth and a crucible that diverges
 statistically from its peers is the anomaly - no labelled data needed.
 
 What the context already gives you:
 
     ctx.feature_column("<key>", stage="heating")
-        -> (track_ids, values) for one feature across vials at the same stage.
-           Restricting by stage matters: a vial still in filling is not a
+        -> (track_ids, values) for one feature across crucibles at the same stage.
+           Restricting by stage matters: a crucible still in filling is not a
            peer of one that has been on the heater for four minutes, and
            pooling them inflates the spread the median is measured against.
 
@@ -24,11 +24,11 @@ What the context already gives you:
 
 Two things worth deciding before writing the comparison:
 
-  * Minimum peer count. DETECTION.min_vials_for_batch_stats exists for this.
-    A median over three vials is not a batch consensus, and early in a run
-    (or late, as vials leave for the oven) that is exactly what you have.
+  * Minimum peer count. DETECTION.min_crucibles_for_batch_stats exists for this.
+    A median over three crucibles is not a batch consensus, and early in a run
+    (or late, as crucibles leave for the oven) that is exactly what you have.
   * Whether a divergence has to persist. ctx.history.series(tid, key) gives
-    the vial's own trajectory - one frame of divergence on an uncalibrated
+    the crucible's own trajectory - one frame of divergence on an uncalibrated
     threshold is a coin flip, several consecutive frames is a signal.
 
 Nothing here is calibratable without real baseline runs on real chemistry.

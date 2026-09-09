@@ -1,7 +1,7 @@
 """Tracking and staging against synthetic centroids.
 
 Deliberately independent of the camera: these are the behaviours that decide
-whether a vial keeps its identity for the length of a run, and they can be
+whether a crucible keeps its identity for the length of a run, and they can be
 pinned down before any hardware or any localiser exists.
 """
 
@@ -53,7 +53,7 @@ def test_identity_survives_movement(zones):
 
 
 def test_crossing_paths_do_not_swap_ids(zones):
-    """Two vials whose nearest neighbour is the other one.
+    """Two crucibles whose nearest neighbour is the other one.
 
     Greedy matching gets this wrong. This is the case the global solve exists
     for, and it is what a handover on the conveyor looks like.
@@ -110,7 +110,7 @@ def test_stage_transition_needs_hysteresis(zones):
     tracker.update([det(0.25)], 0.0)
 
     # 0.25 -> 0.35 is ~102 mm, well inside the assignment gate, so this is the
-    # same vial moving rather than a new one appearing.
+    # same crucible moving rather than a new one appearing.
     tracks, _ = tracker.update([det(0.35)], 45.0)
     assert tracks[0].stage == "filling", "one frame is not enough"
 
