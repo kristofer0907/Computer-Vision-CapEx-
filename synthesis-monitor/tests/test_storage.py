@@ -23,7 +23,7 @@ def result_with(events=(), crucibles=(), frame_id=1) -> PipelineResult:
     return PipelineResult(
         frame_id=frame_id, timestamp=time.time(), source="mock", simulated=True,
         crucibles=list(crucibles), events=list(events),
-        stage_counts={"filling": len(list(crucibles))},
+        stage_counts={"storing": len(list(crucibles))},
         timings_ms={"localize": 1.2},
     )
 

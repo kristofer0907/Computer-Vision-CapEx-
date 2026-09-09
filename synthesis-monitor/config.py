@@ -81,15 +81,18 @@ def _band_rect(x0: float, x1: float, y0: float = 0.27, y1: float = 0.73):
     return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
 
 
+# Named for the real bench, in process order, matching data/zones.json and
+# REGION_TRACKING.region_sequence. These are placeholder rectangles - only the
+# names are authoritative; the shapes come from data/zones.json once traced.
 _DEFAULT_POLYGONS: dict[str, list[tuple[float, float]]] = {
-    "filling": _band_rect(0.02, 0.32),
-    "conveyor": _band_rect(0.32, 0.56),
-    "lidding": _band_rect(0.56, 0.68),
-    "heating": _band_rect(0.68, 0.82),
-    "cooling": _band_rect(0.82, 0.97),
+    "storing": _band_rect(0.02, 0.30),
+    "injection": _band_rect(0.30, 0.56),
+    "heating": _band_rect(0.56, 0.78),
+    "collection": _band_rect(0.78, 0.97),
 }
 
-# Process order.
+# Process order. The one stage vocabulary in this project: every zone name in
+# config, data/, the trackers and the detectors is one of these four.
 STAGE_ORDER: tuple[str, ...] = (
     "storing", "injection", "heating", "collection",
 )
@@ -270,13 +273,13 @@ class TrackingConfig:
     # ~90 s after it happens.
     stage_hysteresis_n: int = 2
 
-    # A track last confirmed in "cooling" that then disappears for
-    # max_missed_frames is recorded as having entered the oven rather than
-    # as lost. KNOWN BLIND SPOT: a real failure during cooling looks
+    # A track last confirmed in "collection" (the cooling/end rack) that then
+    # disappears for max_missed_frames is recorded as having entered the oven
+    # rather than as lost. KNOWN BLIND SPOT: a real failure on that rack looks
     # identical to normal oven entry. Not solved, deliberately not papered
     # over - both paths raise the same inference and it is flagged as
     # inferred, never observed.
-    oven_entry_from: str = "cooling"
+    oven_entry_from: str = "collection"
 
 
 TRACKING = TrackingConfig()
@@ -340,8 +343,8 @@ class RegionTrackingConfig:
     # Which zones the heater->cooling lineage watches (pipeline/lineage.py).
     # "collection" is the cooling/end rack on this bench; rename here if the
     # zones are ever re-traced under different names.
-    heater_zone: str = "heating"
-    cooling_zone: str = "collection"
+    heating_zone: str = "heating"
+    collection_zone: str = "collection"
 
     # Only this heater slot is watched by pipeline/handoff.py. Slot 1 is the
     # left pad, the one the arm actually cycles; slot 0 sits untouched for a

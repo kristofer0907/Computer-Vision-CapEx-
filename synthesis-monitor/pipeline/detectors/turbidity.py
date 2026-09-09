@@ -18,7 +18,7 @@ What the context already gives you:
            there is stored, plotted and available to the other detectors,
            whereas anything computed here is thrown away after the frame.
 
-    pipeline.stats.robust_z / mad
+    a median/MAD robust z-score, written here when this is implemented
         -> median and MAD-based scoring, if you want it. Plain functions, no
            opinions, delete them if you would rather write your own.
 

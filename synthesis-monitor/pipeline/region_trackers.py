@@ -18,14 +18,10 @@ closing in one zone can hand its id to a new track spawning in a
 process order) within a short time window, instead of that new track getting
 a fresh id.
 
-Independent of pipeline/tracking.py's HungarianTracker on purpose - that
-module is about free movement across the whole platform. This is the
-real-hardware crucible layout: fixed slots, a single-file lane and a small fixed process order,
-rather than free movement across a whole platform. Different enough problem
-that reusing the name would be more confusing than reusing the code - the two
-modules do share the same Tracker ABC and Track/Detection types, and could be
-wired into pipeline/runner.py the same way HungarianTracker is, once these
-are proven standalone (see tools/track_regions.py).
+These are the trackers the pipeline runs (main.py). They match the real
+hardware layout: fixed slots, a single-file lane and a small fixed process
+order, rather than free movement across a whole platform. They implement the
+Tracker ABC in pipeline/tracking.py and use its Track/Detection types.
 """
 
 from __future__ import annotations
@@ -80,9 +76,9 @@ class SlotTracker(Tracker):
     "gate after solving" reasoning as pipeline/assignment.py's own docstring).
 
     Identity is the slot itself: a track's id is stable for as long as
-    something occupies that slot. Unlike HungarianTracker there is no
-    hit-count hysteresis before a track is confirmed - a slot match, gated by
-    a hand-marked radius, is already strong identity evidence.
+    something occupies that slot. There is no hit-count hysteresis before a
+    track is confirmed - a slot match, gated by a hand-marked radius, is
+    already strong identity evidence.
     """
 
     def __init__(self, zone_name: str, frame_size: tuple[int, int],
@@ -507,8 +503,8 @@ class RegionTracker(Tracker):
 
     RegionCoordinator deliberately is not a Tracker: its update() returns
     per-zone results, which is what tools/track_regions.py needs to draw
-    overlays and report slot occupancy. The pipeline (pipeline/runner.py)
-    wants the flat (active, closed) pair every Tracker returns, so this
+    overlays and report slot occupancy. The loop in main.py wants the flat
+    (active, closed) pair every Tracker returns, so this
     flattens it, and leaves `.coordinator` reachable for anything that wants
     the zone-level detail back.
     """
@@ -536,9 +532,8 @@ class RegionTracker(Tracker):
         # A track whose id was handed to a spawn in another zone did not end -
         # the same crucible is still on the bench under that id, one zone
         # along. Reporting it as closed would make the pipeline fire a
-        # disappearance event and drop the id's feature history
-        # (pipeline/runner.py calls history.forget() on everything closed)
-        # every single time a crucible moved between zones.
+        # disappearance event and drop the id's feature history every single
+        # time a crucible moved between zones.
         handed_off = {tid for tid, _from, _to in self.coordinator.handoffs_this_frame()}
 
         active: list[Track] = []

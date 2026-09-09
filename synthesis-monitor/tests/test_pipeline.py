@@ -1,8 +1,14 @@
-"""End-to-end: synthetic frames in, PipelineResult out.
+"""Detector host, localisers and the file source.
 
-These are the tests that would have caught every integration bug worth
-catching before hardware existed. They run the real runner, the real tracker,
-the real detector host and the real ROI code against the synthetic platform.
+These used to drive PipelineRunner against the synthetic platform. The runner
+is gone - main.py:Monitor is the loop now - and the simulator draws the old
+whole-platform bench, not the marked crucible rack, so end-to-end assertions
+against it would be testing a drawing. What survives here is everything that
+does not need that runner: the detector registry and its failure isolation,
+the localisers, and the file source.
+
+End-to-end coverage of the real pipeline now comes from running
+`python main.py --rgb file` over a capture folder.
 """
 
 from __future__ import annotations
@@ -11,92 +17,28 @@ import cv2
 import numpy as np
 import pytest
 
-from drivers.rgb_cam import MockCameraSource
+from drivers.base import Frame
 from pipeline.detectors import DetectorHost, load_detectors
 from pipeline.detectors.base import Detector, DetectionContext
-from pipeline.features import FeatureExtractor, NullFeatureExtractor
-from pipeline.localize import GroundTruthLocalizer, NullLocalizer
-from pipeline.runner import PipelineRunner
+from pipeline.localize import GroundTruthLocalizer
+from pipeline.zones import ZoneMap
 
 
-@pytest.fixture
-def camera():
-    cam = MockCameraSource(time_scale=60.0, latency_s=0.0)
-    cam.start()
-    yield cam
-    cam.stop()
+def _ctx(frame_id: int = 1) -> DetectionContext:
+    """The smallest context a detector can legally be handed."""
+    image = np.zeros((64, 64, 3), np.uint8)
+    return DetectionContext(
+        frame=Frame(image, 0.0, frame_id, "test", True),
+        timestamp=0.0, frame_id=frame_id,
+        tracks=[], reports=[], crops={}, masks={}, boxes={},
+        zones={}, zone_map=ZoneMap(), history=None,
+        closed_tracks=[], frame_ref="", interval_s=45.0)
 
 
-@pytest.fixture
-def runner():
-    r = PipelineRunner(localizer=GroundTruthLocalizer(),
-                       extractor=NullFeatureExtractor(),
-                       draw_overlay=False)
-    r.start()
-    yield r
-    r.stop()
-
-
-def test_processes_a_frame(camera, runner):
-    result = runner.process(camera.capture())
-    assert result.frame_id == 1
-    assert result.simulated is True
-    assert "localize" in result.timings_ms
-
-
-def test_finds_and_confirms_crucibles(camera, runner):
-    for _ in range(3):
-        result = runner.process(camera.capture())
-    assert result.n_crucibles > 0
-    assert all(v.radius > 0 for v in result.crucibles)
-
-
-def test_ids_are_stable_across_frames(camera, runner):
-    seen = []
-    for _ in range(5):
-        result = runner.process(camera.capture())
-        seen.append({v.track_id for v in result.crucibles})
-    # The first crucibles tracked must still be tracked at the end - the batch is
-    # stationary in filling for most of a run, so churn here means the gate
-    # or the assignment is wrong.
-    assert seen[1] & seen[-1]
-
-
-def test_crucibles_get_staged(camera, runner):
-    for _ in range(4):
-        result = runner.process(camera.capture())
-    stages = {v.stage for v in result.crucibles}
-    assert stages - {None}, "no crucible landed in any zone polygon"
-    assert sum(result.stage_counts.values()) > 0
-
-
-def test_null_localizer_yields_an_empty_but_valid_result(camera):
-    runner = PipelineRunner(localizer=NullLocalizer(),
-                            extractor=NullFeatureExtractor(),
-                            draw_overlay=False)
-    runner.start()
-    try:
-        result = runner.process(camera.capture())
-        assert result.n_crucibles == 0
-        assert result.events == []
-        assert result.stage_counts  # keys present, all zero
-    finally:
-        runner.stop()
-
-
-def test_overlay_is_encoded_jpeg(camera):
-    runner = PipelineRunner(localizer=GroundTruthLocalizer(),
-                            extractor=NullFeatureExtractor(),
-                            draw_overlay=True)
-    runner.start()
-    try:
-        result = runner.process(camera.capture())
-        assert result.overlay_jpeg[:2] == b"\xff\xd8"    # JPEG SOI
-    finally:
-        runner.stop()
-
-
-def test_stub_detectors_all_load_and_produce_nothing():
+# --------------------------------------------------------------------------
+# Registry
+# --------------------------------------------------------------------------
+def test_detectors_all_load():
     detectors = load_detectors()
     assert {d.name for d in detectors} == {
         "turbidity", "sol_gel_transition", "color_change", "spill",
@@ -108,6 +50,17 @@ def test_stub_detectors_all_load_and_produce_nothing():
 def test_unknown_detector_is_a_hard_error():
     with pytest.raises(ValueError):
         load_detectors(["turbidity", "not_a_detector"])
+
+
+def test_stub_detectors_produce_nothing():
+    host = DetectorHost([d for d in load_detectors() if not d.implemented])
+    host.start()
+    try:
+        results, warnings = host.run(_ctx())
+    finally:
+        host.stop()
+    assert results == []
+    assert warnings == []
 
 
 # --------------------------------------------------------------------------
@@ -133,176 +86,50 @@ class _Quiet(Detector):
         return []
 
 
-def test_a_raising_detector_does_not_stop_the_others(camera):
+def test_a_raising_detector_does_not_stop_the_others():
     quiet = _Quiet()
     host = DetectorHost([_Exploding(), quiet])
-    runner = PipelineRunner(localizer=GroundTruthLocalizer(),
-                            extractor=NullFeatureExtractor(),
-                            detectors=host, draw_overlay=False)
-    runner.start()
+    host.start()
     try:
-        result = runner.process(camera.capture())
-        assert quiet.calls == 1
-        assert any("boom" in w for w in result.warnings)
+        _results, warnings = host.run(_ctx())
     finally:
-        runner.stop()
+        host.stop()
+    assert quiet.calls == 1
+    assert any("boom" in w for w in warnings)
 
 
-def test_a_repeatedly_raising_detector_gets_disabled(camera):
+def test_a_repeatedly_raising_detector_gets_disabled():
     host = DetectorHost([_Exploding()])
-    runner = PipelineRunner(localizer=GroundTruthLocalizer(),
-                            extractor=NullFeatureExtractor(),
-                            detectors=host, draw_overlay=False)
-    runner.start()
+    host.start()
     try:
-        for _ in range(3):
-            result = runner.process(camera.capture())
+        for i in range(3):
+            host.run(_ctx(i))
         assert not host.health()[0]["enabled"]
         # And once disabled it stops adding a warning every frame.
-        result = runner.process(camera.capture())
-        assert not result.warnings
+        _results, warnings = host.run(_ctx(9))
     finally:
-        runner.stop()
-
-
-def test_a_raising_extractor_does_not_stop_the_frame(camera):
-    class Broken(FeatureExtractor):
-        name = "broken"
-
-        def extract(self, crop, mask, track, prev=None):
-            raise ValueError("nope")
-
-    runner = PipelineRunner(localizer=GroundTruthLocalizer(),
-                            extractor=Broken(), draw_overlay=False)
-    runner.start()
-    try:
-        for _ in range(2):
-            result = runner.process(camera.capture())
-        assert result.n_crucibles > 0
-        assert any("nope" in w for w in result.warnings)
-    finally:
-        runner.stop()
+        host.stop()
+    assert warnings == []
 
 
 # --------------------------------------------------------------------------
-# The context a detector is handed
+# Localisers
 # --------------------------------------------------------------------------
-class _Capturing(Detector):
-    name = "capturing"
-
-    def __init__(self):
-        self.ctx: DetectionContext | None = None
-
-    def check(self, ctx):
-        self.ctx = ctx
-        return [self.event(ctx, "test", "hello", severity="info",
-                           track_id=ctx.tracks[0].track_id if ctx.tracks else None)]
-
-
-def test_context_carries_crops_masks_and_zones(camera):
-    spy = _Capturing()
-    runner = PipelineRunner(localizer=GroundTruthLocalizer(),
-                            extractor=NullFeatureExtractor(),
-                            detectors=DetectorHost([spy]), draw_overlay=False)
-    runner.start()
-    try:
-        for _ in range(3):
-            result = runner.process(camera.capture())
-    finally:
-        runner.stop()
-
-    ctx = spy.ctx
-    assert ctx.tracks
-    tid = ctx.tracks[0].track_id
-    assert ctx.crops[tid].ndim == 3
-    assert ctx.masks[tid].shape == ctx.crops[tid].shape[:2]
-    assert ctx.masks[tid].max() == 255
-    assert ctx.zones, "zone views must be built"
-
-    view = next(iter(ctx.zones.values()))
-    assert view.bench_mask.shape == view.zone_mask.shape
-    assert view.bench_mask.sum() <= view.zone_mask.sum(), "crucibles must be punched out"
-    assert any(e.kind == "test" for e in result.events)
-
-
-def test_previous_crop_is_available_and_size_matched(camera):
-    spy = _Capturing()
-    runner = PipelineRunner(localizer=GroundTruthLocalizer(),
-                            extractor=NullFeatureExtractor(),
-                            detectors=DetectorHost([spy]), draw_overlay=False)
-    runner.start()
-    try:
-        first = runner.process(camera.capture())
-        # Nothing is confirmed on frame 1 (min_hits_to_confirm), so there is
-        # nothing to have a previous crop of yet.
-        assert first.n_crucibles == 0
-        for _ in range(3):
-            runner.process(camera.capture())
-    finally:
-        runner.stop()
-
-    ctx = spy.ctx
-    tid = ctx.tracks[0].track_id
-    prev = ctx.previous_crop(tid)
-    assert prev is not None, "the colour-change comparison needs this"
-    assert prev.shape == ctx.crops[tid].shape, "must be diffable without resizing"
-
-
-def test_feature_column_reads_across_the_batch(camera):
-    class Fake(FeatureExtractor):
-        name = "fake"
-
-        def extract(self, crop, mask, track, prev=None):
-            return {"brightness": float(track.track_id)}
-
-    spy = _Capturing()
-    runner = PipelineRunner(localizer=GroundTruthLocalizer(), extractor=Fake(),
-                            detectors=DetectorHost([spy]), draw_overlay=False)
-    runner.start()
-    try:
-        for _ in range(3):
-            runner.process(camera.capture())
-    finally:
-        runner.stop()
-
-    ids, values = spy.ctx.feature_column("brightness")
-    assert len(ids) == len(values) > 1
-    assert values == [float(i) for i in ids]
-    assert spy.ctx.feature_column("does_not_exist") == ([], [])
-
-
-def test_history_records_features_over_time(camera):
-    class Counting(FeatureExtractor):
-        name = "counting"
-
-        def __init__(self):
-            self.n = 0
-
-        def extract(self, crop, mask, track, prev=None):
-            self.n += 1
-            return {"n": float(self.n)}
-
-    runner = PipelineRunner(localizer=GroundTruthLocalizer(),
-                            extractor=Counting(), draw_overlay=False)
-    runner.start()
-    try:
-        for _ in range(4):
-            result = runner.process(camera.capture())
-        tid = result.crucibles[0].track_id
-        assert len(runner.history.series(tid, "n")) >= 2
-    finally:
-        runner.stop()
-
-
 def test_ground_truth_localizer_is_blind_on_a_real_frame():
     """It must not silently pretend to work once a real camera is attached."""
-    from drivers.base import Frame
-
     loc = GroundTruthLocalizer()
     loc.start()
     real = Frame(np.zeros((10, 10, 3), np.uint8), 0.0, 1, "picamera2", False)
     assert loc.locate(real) == []
     assert loc.real_capable is False
+
+
+def test_auto_localizer_is_the_crucible_one():
+    """"auto" is classical Hough - the settled decision."""
+    from pipeline.localize import CrucibleLocalizer, create_localizer
+
+    assert isinstance(create_localizer("auto"), CrucibleLocalizer)
+    assert create_localizer("auto").real_capable is True
 
 
 # --------------------------------------------------------------------------
@@ -314,7 +141,7 @@ def test_ground_truth_localizer_is_blind_on_a_real_frame():
     pytest.param({}, id="no-zones"),
     pytest.param({"rack": [(0.02, 0.3), (0.3, 0.3), (0.3, 0.7), (0.02, 0.7)]},
                  id="renamed-zones"),
-    pytest.param({"filling": [(0.05, 0.35), (0.28, 0.30), (0.30, 0.72),
+    pytest.param({"storing": [(0.05, 0.35), (0.28, 0.30), (0.30, 0.72),
                               (0.03, 0.68)]},
                  id="non-rectangular"),
 ])
@@ -331,17 +158,16 @@ def test_scene_renders_against_arbitrary_zone_sets(monkeypatch, polygons):
 
 # --------------------------------------------------------------------------
 # ManualLocalizer: how your own captured images get through the pipeline
-# before a real localiser exists.
+# before the Hough parameters are tuned for a new bench layout.
 # --------------------------------------------------------------------------
 def _marks_file(tmp_path, **entries):
     import json
-    path = tmp_path / "vials.json"
+    path = tmp_path / "marks.json"
     path.write_text(json.dumps(entries))
     return path
 
 
 def _file_frame(image, name):
-    from drivers.base import Frame
     return Frame(image, 0.0, 1, "file", True, {"name": name, "path": name})
 
 
@@ -383,7 +209,7 @@ def test_manual_localizer_scales_to_a_different_frame_size(tmp_path):
 
     from pipeline.localize import ManualLocalizer
 
-    path = tmp_path / "vials.json"
+    path = tmp_path / "marks.json"
     path.write_text(json.dumps({
         "default": [{"cx": 640, "cy": 360, "radius": 20}],
         "_image_size": [1280, 720],
@@ -418,86 +244,3 @@ def test_file_source_reports_which_file_a_frame_came_from(tmp_path):
     finally:
         source.stop()
     assert names == ["shot_0.png", "shot_1.png"]
-
-
-def test_runner_starts_a_tracker_that_needs_starting():
-    """A tracker that loads something from disk must get its start() called.
-
-    The Tracker ABC has no start() - HungarianTracker sets up in __init__ -
-    so PipelineRunner did not call one. The region trackers read their
-    hand-marked layouts in start(), and without this they load nothing,
-    match nothing, and report an empty platform with no error anywhere.
-    """
-    from pipeline.tracking import Tracker
-
-    class StartCountingTracker(Tracker):
-        def __init__(self):
-            self.starts = 0
-
-        def start(self):
-            self.starts += 1
-
-        def update(self, detections, timestamp):
-            return [], []
-
-        def reset(self):
-            pass
-
-        @property
-        def tracks(self):
-            return []
-
-    tracker = StartCountingTracker()
-    runner = PipelineRunner(localizer=NullLocalizer(),
-                            extractor=NullFeatureExtractor(),
-                            tracker=tracker, draw_overlay=False)
-    runner.start()
-    try:
-        assert tracker.starts == 1
-        runner.start()                      # idempotent, must not start twice
-        assert tracker.starts == 1
-    finally:
-        runner.stop()
-
-
-def test_runner_still_accepts_a_tracker_with_no_start():
-    """HungarianTracker has no start() - the hook must stay optional."""
-    from pipeline.tracking import HungarianTracker
-
-    runner = PipelineRunner(localizer=NullLocalizer(),
-                            extractor=NullFeatureExtractor(),
-                            tracker=HungarianTracker(), draw_overlay=False)
-    runner.start()
-    runner.stop()
-
-
-def test_normal_region_exits_are_info_not_warnings():
-    """A crucible leaving a slot, or reaching the lane's exit, is the process
-    working - not a disappearance.
-
-    pipeline/region_trackers.py closes a track on every such exit. Before
-    runner.py knew those reasons, each one raised a "track_lost" warning, so
-    a normal run would have been wall-to-wall false alarms.
-    """
-    from pipeline.types import Track
-
-    runner = PipelineRunner(localizer=NullLocalizer(),
-                            extractor=NullFeatureExtractor(),
-                            draw_overlay=False)
-
-    def closed(reason: str, tid: int) -> Track:
-        t = Track(track_id=tid, cx=10.0, cy=10.0, radius=5.0,
-                  first_seen_ts=0.0, last_seen_ts=1.0, stage="storing")
-        t.closed_reason = reason
-        return t
-
-    events = runner._closure_events(
-        [closed("vacated", 1), closed("advanced", 2),
-         closed("lost", 3), closed("oven", 4)],
-        frame_id=1, now=2.0)
-
-    by_id = {e.track_id: e for e in events}
-    assert (by_id[1].kind, by_id[1].severity) == ("track_ended", "info")
-    assert (by_id[2].kind, by_id[2].severity) == ("track_ended", "info")
-    assert (by_id[3].kind, by_id[3].severity) == ("track_lost", "warning")
-    assert (by_id[4].kind, by_id[4].severity) == ("oven_entry_inferred", "info")

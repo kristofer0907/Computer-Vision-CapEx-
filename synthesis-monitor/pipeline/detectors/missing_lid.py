@@ -26,9 +26,9 @@ class MissingLidDetector(Detector):
     name = "missing_lid"
     description = "Crucible placed on a heater without a lid"
 
-    def __init__(self, heater_zone: str | None = None) -> None:
-        self.heater_zone = heater_zone or REGION_TRACKING.heater_zone
-        self.latch = MissingLid(heater_zone=self.heater_zone)
+    def __init__(self, heating_zone: str | None = None) -> None:
+        self.heating_zone = heating_zone or REGION_TRACKING.heating_zone
+        self.latch = MissingLid(heating_zone=self.heating_zone)
 
     @property
     def stop_requested(self) -> bool:
@@ -41,7 +41,7 @@ class MissingLidDetector(Detector):
         heater position, and a slot that has already been asked must not be
         re-asked just because the track behind it was renumbered.
         """
-        view = ctx.zones.get(self.heater_zone)
+        view = ctx.zones.get(self.heating_zone)
         ids = set(view.track_ids) if view is not None else set()
         return {t.slot_id: t.center for t in ctx.tracks
                 if t.slot_id is not None and t.track_id in ids}
@@ -49,4 +49,4 @@ class MissingLidDetector(Detector):
     def check(self, ctx: DetectionContext) -> list[AnomalyResult]:
         events = self.latch.check(ctx.frame.image, self._on_heater(ctx),
                                   ctx.timestamp, ctx.frame_id)
-        return [self.anomaly(ctx, zone=self.heater_zone) for _ in events]
+        return [self.anomaly(ctx, zone=self.heating_zone) for _ in events]

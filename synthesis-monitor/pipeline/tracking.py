@@ -1,15 +1,14 @@
-"""Crucible identity across analysis frames.
+"""The Tracker interface, and the cadence controller that paces the loop.
 
-Approach is settled: global assignment on ground distance, gated in
-millimetres, with the stage machine running inside zone polygons. Appearance-
-plus-Kalman trackers were evaluated and rejected - their motion models assume
-near-continuous frames and there are 30-60 seconds between ours, so they would
-be predicting from a state that is already meaningless. Settled; do not
-reopen.
+The implementations live in pipeline/region_trackers.py: SlotTracker for the
+fixed-slot zones, FifoTracker for the injection lane. The whole-platform
+assignment tracker that used to live here is gone - this bench has marked
+slots and one lane, not free movement across a platform, and matching against
+those is both simpler and correct.
 
-The Tracker ABC exists so that decision stays reversible for a *different*
-reason: if the platform ever gets a continuous-video zone, that zone can run a
-different Tracker implementation without the rest of the pipeline noticing.
+The Tracker ABC stays so that decision remains reversible: if the platform
+ever gets a continuous-video zone, that zone can run a different Tracker
+implementation without the rest of the pipeline noticing.
 
 No detection logic here. This module answers "which crucible is this", never
 "is this crucible in trouble".
@@ -50,112 +49,6 @@ class Tracker(ABC):
     @abstractmethod
     def tracks(self) -> list[Track]:
         """Currently live tracks, confirmed or not."""
-
-
-class HungarianTracker(Tracker):
-    """Global nearest-crucible assignment with a physical-plausibility gate.
-
-    Cost is ground distance in millimetres. Anything beyond the gate is not
-    matched at all: at the slow cadence a crucible can legitimately cross most of
-    the platform between frames, but it cannot appear on the other side of a
-    zone it never entered, and a gate in mm is the only honest way to say so.
-    """
-
-    def __init__(self, zone_map: ZoneMap | None = None,
-                 stage_tracker: StageTracker | None = None,
-                 max_assignment_mm: float | None = None,
-                 max_missed_frames: int | None = None,
-                 min_hits_to_confirm: int | None = None) -> None:
-        self.zones = zone_map or ZoneMap()
-        self.stages = stage_tracker or StageTracker(self.zones)
-        self.gate_mm = (TRACKING.max_assignment_mm
-                        if max_assignment_mm is None else max_assignment_mm)
-        self.max_missed = (TRACKING.max_missed_frames
-                           if max_missed_frames is None else max_missed_frames)
-        self.min_hits = (TRACKING.min_hits_to_confirm
-                         if min_hits_to_confirm is None else min_hits_to_confirm)
-        self._tracks: list[Track] = []
-        self._next_id = 1
-
-    # ------------------------------------------------------------ interface
-    @property
-    def tracks(self) -> list[Track]:
-        return list(self._tracks)
-
-    def reset(self) -> None:
-        self._tracks.clear()
-
-    def set_gate_mm(self, gate_mm: float) -> None:
-        """Tighten the gate when the cadence speeds up.
-
-        At the 10 s conveyor cadence a crucible covers roughly a quarter of what
-        it can cover in 45 s, so keeping the slow gate would let the solver
-        cheerfully swap two neighbouring crucibles' identities.
-        """
-        self.gate_mm = gate_mm
-
-    # -------------------------------------------------------------- update
-    def update(self, detections: list[Detection], timestamp: float
-               ) -> tuple[list[Track], list[Track]]:
-        matched, lost_idx, new_idx = self._associate(detections)
-
-        for t_idx, d_idx in matched:
-            self._absorb(self._tracks[t_idx], detections[d_idx], timestamp)
-
-        for d_idx in new_idx:
-            self._tracks.append(self._spawn(detections[d_idx], timestamp))
-
-        closed: list[Track] = []
-        for t_idx in lost_idx:
-            track = self._tracks[t_idx]
-            track.missed += 1
-            if track.missed > self.max_missed:
-                track.closed_reason = self.stages.close_reason(track)
-                closed.append(track)
-
-        if closed:
-            gone = {id(t) for t in closed}
-            self._tracks = [t for t in self._tracks if id(t) not in gone]
-
-        return self.tracks, closed
-
-    # -------------------------------------------------------------- helpers
-    def _associate(self, detections: list[Detection]):
-        if not self._tracks or not detections:
-            return [], list(range(len(self._tracks))), list(range(len(detections)))
-
-        cost = np.zeros((len(self._tracks), len(detections)), dtype=np.float64)
-        for i, track in enumerate(self._tracks):
-            for j, det in enumerate(detections):
-                cost[i, j] = distance_mm(track.center, det.center)
-        return assign_with_gate(cost, self.gate_mm)
-
-    def _spawn(self, det: Detection, timestamp: float) -> Track:
-        track = Track(track_id=self._next_id, cx=det.cx, cy=det.cy,
-                      radius=det.radius, first_seen_ts=timestamp,
-                      last_seen_ts=timestamp)
-        self._next_id += 1
-        track.confirmed = self.min_hits <= 1
-        # A brand-new track commits its first stage immediately. Hysteresis
-        # guards against flapping between stages, not against the initial
-        # observation, and making a crucible wait N frames for its first stage
-        # would leave it unstaged through most of a short zone.
-        stage = self.zones.zone_at(track.cx, track.cy)
-        if stage is not None:
-            track.stage = stage
-            track.stage_since_ts = timestamp
-            track.stage_log.append((stage, timestamp))
-        return track
-
-    def _absorb(self, track: Track, det: Detection, timestamp: float) -> None:
-        track.cx, track.cy = det.cx, det.cy
-        track.radius = det.radius
-        track.last_seen_ts = timestamp
-        track.hits += 1
-        track.missed = 0
-        if track.hits >= self.min_hits:
-            track.confirmed = True
-        self.stages.update(track, timestamp)
 
 
 class CadenceController:
@@ -206,19 +99,13 @@ def create_tracker(name: str = "auto", frame_size: tuple[int, int] | None = None
                    zone_map: ZoneMap | None = None) -> Tracker:
     """Build a tracker by name, mirroring pipeline.localize.create_localizer.
 
-    "auto" stays HungarianTracker: the crucible-flow model is what the simulator
-    and every existing test drive, and changing that silently would swap the
-    behaviour of every caller that did not ask for it.
-
-    "region" is the real-hardware crucible layout - per-zone slot matching
-    plus a FIFO lane, with identity handed across zone boundaries. It needs
-    the hand-marked slot and lane files (see tools/mark_slots.py) and will
-    raise FileNotFoundError at start() without them.
+    One implementation: per-zone slot matching plus a FIFO lane, with identity
+    handed across zone boundaries. It needs the hand-marked slot and lane
+    files (see tools/mark_slots.py) and raises FileNotFoundError at start()
+    without them.
     """
     key = (name or "auto").lower()
-    if key in ("auto", "hungarian", "crucible"):
-        return HungarianTracker(zone_map)
-    if key in ("region", "crucible", "zones"):
+    if key in ("auto", "region", "crucible", "zones", "slot"):
         # Imported here, not at module level: pipeline.region_trackers imports
         # this module for the Tracker ABC, so a top-level import would be
         # circular.

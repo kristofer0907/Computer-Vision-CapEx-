@@ -1,9 +1,8 @@
 """SlotTracker, FifoTracker and RegionCoordinator against synthetic data.
 
-Deliberately independent of the camera and of pipeline/tracking.py's
-crucible-flow HungarianTracker - these are the real-hardware crucible zone
+Deliberately independent of the camera - these are the crucible zone
 mechanics (nearest fixed slot, order along a lane, handoff across a zone
-boundary), pinned down before any real capture pipeline is wired to them.
+boundary), pinned down separately from the loop that drives them.
 """
 
 from __future__ import annotations
@@ -327,7 +326,7 @@ def test_region_tracker_is_usable_as_a_tracker(tmp_path):
 def test_region_tracker_does_not_report_a_handoff_as_closed(tmp_path):
     """A crucible moving zones must not look like a disappearance.
 
-    pipeline/runner.py fires a closure event and calls history.forget() on
+    the loop fires a closure event and calls history.forget() on
     everything in the closed list, so leaking handoff donors into it would
     drop the crucible's feature history and raise a false alarm on every
     normal zone transition.
@@ -381,12 +380,13 @@ def test_region_tracker_still_reports_a_real_disappearance(tmp_path):
     assert [t.closed_reason for t in closed] == ["vacated"]
 
 
-def test_create_tracker_auto_is_still_hungarian():
-    """Default behaviour must not change for anything that did not opt in."""
-    from pipeline.tracking import HungarianTracker, create_tracker
+def test_create_tracker_auto_is_the_region_tracker():
+    """One implementation now: slots plus the lane, per zone."""
+    from pipeline.region_trackers import RegionTracker
+    from pipeline.tracking import create_tracker
 
-    assert isinstance(create_tracker("auto"), HungarianTracker)
-    assert isinstance(create_tracker(), HungarianTracker)
+    assert isinstance(create_tracker("auto"), RegionTracker)
+    assert isinstance(create_tracker(), RegionTracker)
 
 
 def test_create_tracker_rejects_an_unknown_name():

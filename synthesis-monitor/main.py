@@ -45,7 +45,7 @@ from pipeline import roi
 from pipeline.detectors import DetectorHost
 from pipeline.detectors.base import DetectionContext, ZoneView
 from pipeline.history import CrucibleHistory
-from pipeline.lineage import VialLineage
+from pipeline.lineage import CrucibleLineage
 from pipeline.localize import create_localizer
 from pipeline.region_trackers import (RegionTracker, SlotTracker,
                                       create_region_coordinator)
@@ -118,7 +118,7 @@ class Monitor:
         self.snapshots = SnapshotStore()
         self.localizer = None
         self.tracker: RegionTracker | None = None
-        self.lineage = VialLineage()
+        self.lineage = CrucibleLineage()
         self.detectors = DetectorHost()
         self.cadence = CadenceController()
         self.history = CrucibleHistory()
@@ -243,13 +243,13 @@ class Monitor:
         tracks, closed = self.tracker.update(detections, now)
         coord = self.tracker.coordinator
 
-        # Lineage runs on slot occupancy alone, at the heater->cooling
+        # Lineage runs on slot occupancy alone, at the heating->collection
         # boundary. It is not folded into the tracker or the detectors: it
         # answers "which crucible is this", they answer "is this wrong".
         self.lineage.update(
-            slot_occupancy(coord, REGION_TRACKING.heater_zone),
-            slot_occupancy(coord, REGION_TRACKING.cooling_zone),
-            now, heater_pos=slot_positions(coord, REGION_TRACKING.heater_zone))
+            slot_occupancy(coord, REGION_TRACKING.heating_zone),
+            slot_occupancy(coord, REGION_TRACKING.collection_zone),
+            now, heater_pos=slot_positions(coord, REGION_TRACKING.heating_zone))
 
         frame_ref = ""
         if self.persist and self._frames % max(1, STORAGE.snapshot_every_n_frames) == 0:
