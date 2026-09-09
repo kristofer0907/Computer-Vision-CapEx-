@@ -26,6 +26,13 @@ that a crucible vanishing from the detections is itself the loudest tip-over
 signal, and that belongs to lineage, which is what knows a crucible was there
 a frame ago.
 
+What this set does NOT measure: two further tipped crucibles lie on the
+pegboard between the injector and the plate, off every slot in
+FAIL_SAFE_SLOTS, so they are absent from every number this script prints.
+Scored by hand at (2025, 1570) and (1790, 1988) they come out at 0.58 and
+0.80 - caught by the measure, missed by the search. See "off-plate tip-over"
+in CLAUDE.md. Read the accuracy below as "on-plate", never as "on-bench".
+
 The evidence is six objects. Three tipped and three upright crucibles, each
 in seven near-identical frames of one scene under one lighting setup. The gap
 is wide and it is the same in every frame, but 105 rows here are not 105

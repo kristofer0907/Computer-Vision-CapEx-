@@ -279,6 +279,14 @@ def rim_circularity(img: np.ndarray, cx: float, cy: float,
     That is three tipped crucibles and three upright ones seen seven times
     each, not 105 independent samples. The gap is wide and stable across
     every frame; it is still six objects in one scene.
+
+    This is a verifier, not a detector. It answers "is the crucible that
+    should be here upright", and it must be told where to look: swept blind
+    over the bench, 105 of 105 clutter points score below the threshold,
+    because nothing on a pegboard is a circle either. Two more tipped
+    crucibles sit off the plate in the same frames and are missed for exactly
+    that reason - not because they score high (0.58 and 0.80) but because
+    nothing anchors the measure on them.
     """
     r = GEOMETRY.crucible_radius_px if r is None else r
     mag = rim_gradient(img) if _mag is None else _mag

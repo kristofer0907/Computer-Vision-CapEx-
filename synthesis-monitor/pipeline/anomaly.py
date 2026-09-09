@@ -150,12 +150,16 @@ def check_fallen_crucible(cycle: Cycle,
 
     - It only ever sees the positions it is handed, and those must be where
       a crucible is *expected* - a slot centre - not where one was detected.
-      detect_crucibles() finds none of the three tipped crucibles in
-      capture/fail_safe: a crucible on its side stops being a circle. So a
-      crucible vanishing from the detections is the louder tip-over signal,
-      and it belongs to lineage, which is what knows a crucible was there a
-      frame ago. This check is the second half of that pair, for the tipped
-      crucible that still reads as roughly circular.
+      detect_crucibles() finds none of the tipped crucibles in
+      capture/fail_safe: a crucible on its side stops being a circle.
+
+    - It is blind off the plate, and that is a real gap, not a rounding
+      error. capture/fail_safe holds five tipped crucibles, not the three on
+      the plate: two more lie on the pegboard between the injector and the
+      plate. rim_circularity scores them 0.58 and 0.80, well under the
+      threshold - the measure is right, there is simply no anchor pointing at
+      them. See "off-plate tip-over" in CLAUDE.md for why nothing cheap
+      fixes that.
     - The threshold is a mid-gap guess over four objects in one scene. See
       DETECTION.fallen_circularity_threshold.
     """
