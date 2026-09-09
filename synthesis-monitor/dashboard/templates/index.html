@@ -270,9 +270,15 @@ async function refresh() {
 
     const timings = Object.entries(p.timings_ms || {})
       .map(([k, v]) => `${k} ${v}ms`).join(' · ');
+    // p.n_crucibles counts only crucibles with an id (heating/collection) -
+    // it matches what storage/db.py writes to frames.n_crucibles. The badge
+    // sums stage_counts instead, which also has storing/injection, so it
+    // shows everything actually seen this frame, not just what has an id.
+    const seen = Object.values(p.stage_counts || {})
+      .reduce((a, b) => a + b, 0);
     document.getElementById('pipe-stats').innerHTML =
       `<div><span>frame</span> <b>${p.frame_id ?? '—'}</b></div>
-       <div><span>crucibles</span> <b>${p.n_crucibles ?? 0}</b></div>
+       <div><span>crucibles</span> <b>${seen}</b></div>
        <div><span>age</span> <b>${secs(p.age_s)}</b></div>
        <div class="muted">${esc(timings)}</div>`;
 

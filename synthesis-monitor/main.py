@@ -372,7 +372,7 @@ class Monitor:
             frame_id=frame.frame_id, timestamp=now, source=frame.source,
             simulated=frame.simulated, crucibles=reports,
             events=[_as_event(r, frame.frame_id) for r in results],
-            stage_counts=self._stage_counts(tracks),
+            stage_counts=self._stage_counts(tracks, coord),
             overlay_jpeg=overlay, warnings=warnings,
         )
 
@@ -424,11 +424,22 @@ class Monitor:
                 track_ids=[t.track_id for t in inside])
         return views
 
-    def _stage_counts(self, tracks) -> dict[str, int]:
+    def _stage_counts(self, tracks, coord) -> dict[str, int]:
+        """Per-zone counts, tracked and untracked alike.
+
+        `tracks` only ever holds heating/collection - storing and injection
+        have no tracker (REGION_TRACKING.id_zones) and their detections live
+        in coord.untracked instead. Without folding those in, the dashboard
+        undercounts every crucible that has not reached a heater yet, which
+        for most of a run is most of them.
+        """
         counts = {name: 0 for name in REGION_TRACKING.region_sequence}
         for t in tracks:
             if t.stage in counts:
                 counts[t.stage] += 1
+        for zone, dets in coord.untracked.items():
+            if zone in counts:
+                counts[zone] += len(dets)
         return counts
 
     def _overlay(self, image: np.ndarray, tracks, coord,
@@ -437,6 +448,17 @@ class Monitor:
 
         out = self.zones.draw(image)
         tripped = {r.zone for r in results if r.tripped}
+
+        # Zones with no tracker (storing, injection - see REGION_TRACKING.
+        # id_zones) still get their detections drawn, deliberately without a
+        # label: no identity is assigned there, so a number would be a lie.
+        UNTRACKED_BGR = (170, 170, 170)
+        for dets in coord.untracked.values():
+            for d in dets:
+                c = (int(round(d.cx)), int(round(d.cy)))
+                cv2.circle(out, c, int(round(d.radius)), UNTRACKED_BGR, 1,
+                          cv2.LINE_AA)
+
         for t in tracks:
             zone = getattr(t, "stage", None)
             color = (0, 0, 255) if zone in tripped else (0, 200, 0)
