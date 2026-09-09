@@ -52,6 +52,10 @@
             background:rgba(224,168,60,.10); color:var(--warn);
             border-bottom:1px solid var(--line); }
   .banner code { background:rgba(0,0,0,.25); padding:1px 5px; border-radius:3px; }
+  .hazard { margin:0; padding:10px 18px; font-size:13px; font-weight:600;
+            background:rgba(224,82,82,.16); color:var(--alert);
+            border-bottom:1px solid var(--alert); }
+  .hazard .sub { color:var(--alert); opacity:.85; font-weight:400; }
   .stagebar { display:flex; gap:6px; flex-wrap:wrap; padding:10px 12px; }
   .stage { background:var(--panel2); border:1px solid var(--line);
            border-radius:6px; padding:5px 9px; font-size:11px; min-width:74px; }
@@ -68,6 +72,8 @@
 </style>
 </head>
 <body>
+<p class="hazard" id="hazard-banner" hidden></p>
+
 <header>
   <h1>CapEx Synthesis Monitor</h1>
   <span class="sub" id="sources">starting…</span>
@@ -200,6 +206,31 @@ function renderCrucibles(crucibles) {
     </tr>`).join('');
 }
 
+function renderHazardBanner(events, health) {
+  // The banner tracks the same events the table below it already shows -
+  // no separate "is there a hazard" flag exists or is needed, because an
+  // alert-severity event already means a detector tripped. Scanning the
+  // visible window (events_page_size, newest first) rather than only the
+  // latest entry matters once more than one detector can trip: a later
+  // info-level event (a normal stage change, say) must not push an
+  // unresolved alert out of view.
+  const banner = document.getElementById('hazard-banner');
+  const alerts = events.filter(e => e.severity === 'alert');
+  if (!alerts.length) {
+    banner.hidden = true;
+    return;
+  }
+  const latest = alerts[0];
+  const proc = (health.workers || {}).processing;
+  const halted = proc && proc.alive === false;
+  const more = alerts.length > 1 ? ` (+${alerts.length - 1} more)` : '';
+  banner.hidden = false;
+  banner.innerHTML =
+    `⚠ ${esc(latest.message)}${more}` +
+    (halted ? ' — capture halted, restart main.py to resume' : '') +
+    ` <span class="sub">${clock(latest.timestamp)}</span>`;
+}
+
 function renderEvents(events) {
   const body = document.getElementById('events');
   document.getElementById('events-empty').hidden = events.length > 0;
@@ -288,6 +319,7 @@ async function refresh() {
 
     renderStages(p.stage_counts || {});
     renderCrucibles(p.crucibles || []);
+    renderHazardBanner(st.events || [], h);
     renderEvents(st.events || []);
     renderWorkers(h);
   } catch (err) { console.error(err); }

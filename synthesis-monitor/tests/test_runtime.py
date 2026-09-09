@@ -132,3 +132,42 @@ def test_series_requires_a_feature(client):
 
 def test_snapshot_path_traversal_is_refused(client):
     assert client.get("/snapshot/../../config.py").status_code in (301, 404)
+
+
+# --------------------------------------------------------------------------
+# The hazard banner. Its logic is client-side JS (severity=='alert' among
+# recent events, plus whether the vision worker actually halted) - not
+# runnable here. What's tested at this layer is the data contract it reads:
+# that a tripped detector's event really does arrive at /api/state with
+# severity "alert", and that the page ships the wiring to read it.
+# --------------------------------------------------------------------------
+def test_index_ships_the_hazard_banner_element_and_its_renderer(client):
+    page = client.get("/").data.decode()
+    assert 'id="hazard-banner"' in page
+    assert "renderHazardBanner" in page
+    assert "renderHazardBanner(st.events" in page, \
+        "the banner must be driven by the same events the table below shows"
+
+
+def test_state_reports_an_alert_event_for_the_banner_to_read():
+    from pipeline.types import Event
+
+    from dashboard.app import create_app
+
+    sup = FakeSupervisor()
+    sup.events.extend([Event(
+        kind="missing_lid", severity="alert",
+        message="missing_lid in heating", timestamp=1_800_000_000.0,
+        frame_id=3, detector="missing_lid", zone="heating")])
+    app = create_app(sup)
+    app.config["TESTING"] = True
+    client = app.test_client()
+
+    body = client.get("/api/state").get_json()
+    assert body["events"][0]["severity"] == "alert"
+    assert body["events"][0]["message"] == "missing_lid in heating"
+
+
+def test_state_with_no_alerts_has_none_at_alert_severity(client):
+    body = client.get("/api/state").get_json()
+    assert not any(e["severity"] == "alert" for e in body["events"])
