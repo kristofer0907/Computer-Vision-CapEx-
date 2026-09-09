@@ -32,6 +32,7 @@ import logging
 import sqlite3
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -406,6 +407,87 @@ class Database:
         return out
 
     # -------------------------------------------------------------- pruning
+    #: The per-frame history. anomaly_events is deliberately absent: it is the
+    #: alarm log, it is tiny, and a failure worth recording is worth keeping
+    #: past the window that governs routine measurements. clear_all() takes it
+    #: only when explicitly asked.
+    HISTORY_TABLES = ("crucible_samples", "events", "thermal_samples", "frames")
+
+    def prune_between(self, start_ts: float, end_ts: float,
+                      include_anomalies: bool = False) -> dict[str, int]:
+        """Delete history rows with start_ts <= timestamp < end_ts.
+
+        Half-open on purpose, so "clear the 5th" and "clear the 6th" cannot
+        both claim a row written at midnight.
+        """
+        if end_ts <= start_ts:
+            raise ValueError("end must be after start")
+        deleted: dict[str, int] = {}
+        with self._lock:
+            self.conn.execute("BEGIN")
+            try:
+                for table in self.HISTORY_TABLES:
+                    cur = self.conn.execute(
+                        f"DELETE FROM {table} WHERE timestamp >= ? AND timestamp < ?",
+                        (start_ts, end_ts))
+                    deleted[table] = cur.rowcount
+                if include_anomalies:
+                    # This table stores ISO-8601 text, not epoch seconds.
+                    cur = self.conn.execute(
+                        "DELETE FROM anomaly_events "
+                        "WHERE timestamp >= ? AND timestamp < ?",
+                        (datetime.fromtimestamp(start_ts).isoformat(
+                            timespec="seconds"),
+                         datetime.fromtimestamp(end_ts).isoformat(
+                             timespec="seconds")))
+                    deleted["anomaly_events"] = cur.rowcount
+                self.conn.execute("COMMIT")
+            except Exception:
+                self.conn.execute("ROLLBACK")
+                raise
+        log.info("deleted rows between %s and %s: %s",
+                 datetime.fromtimestamp(start_ts), datetime.fromtimestamp(end_ts),
+                 deleted)
+        return deleted
+
+    def clear_all(self, include_anomalies: bool = True,
+                  include_runs: bool = True) -> dict[str, int]:
+        """Empty the data tables. The schema and meta row stay.
+
+        Runs go last: every other table references them.
+        """
+        tables = list(self.HISTORY_TABLES)
+        if include_anomalies:
+            tables.append("anomaly_events")
+        if include_runs:
+            tables.append("runs")
+        deleted: dict[str, int] = {}
+        with self._lock:
+            self.conn.execute("BEGIN")
+            try:
+                for table in tables:
+                    cur = self.conn.execute(f"DELETE FROM {table}")
+                    deleted[table] = cur.rowcount
+                self.conn.execute("COMMIT")
+            except Exception:
+                self.conn.execute("ROLLBACK")
+                raise
+        if include_runs:
+            self.run_id = None
+        log.warning("cleared the database: %s", deleted)
+        return deleted
+
+    def counts_by_table(self) -> dict[str, int]:
+        """Row counts, for showing an operator what they are about to delete."""
+        out: dict[str, int] = {}
+        for table in (*self.HISTORY_TABLES, "anomaly_events", "runs"):
+            try:
+                out[table] = self.conn.execute(
+                    f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            except sqlite3.Error:
+                out[table] = 0
+        return out
+
     def prune(self, retention_days: int | None = None) -> dict[str, int]:
         """Delete rows older than the retention window. 0 days disables.
 

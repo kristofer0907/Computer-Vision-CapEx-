@@ -395,8 +395,54 @@ REGION_TRACKING = RegionTrackingConfig()
 # --------------------------------------------------------------------------
 # Storage
 # --------------------------------------------------------------------------
+STORAGE_POLICY_FILE = DATA_DIR / "storage_policy.json"
+
+
+def load_storage_policy() -> dict:
+    """Operator overrides from tools/storage_policy.py, or {} if never set."""
+    if not STORAGE_POLICY_FILE.exists():
+        return {}
+    try:
+        raw = json.loads(STORAGE_POLICY_FILE.read_text())
+        return raw if isinstance(raw, dict) else {}
+    except Exception:
+        log.warning("could not read %s, using the built-in storage defaults",
+                    STORAGE_POLICY_FILE, exc_info=True)
+        return {}
+
+
+def _policy_value(key: str, default: int) -> int:
+    """One policy number, falling back to the default if it is not sane.
+
+    A bad value here means silently keeping everything or nothing, so it is
+    checked rather than trusted.
+    """
+    value = load_storage_policy().get(key, default)
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        log.warning("storage policy %s=%r is not a number, using %d",
+                    key, value, default)
+        return default
+    if value < 0:
+        log.warning("storage policy %s=%d is negative, using %d",
+                    key, value, default)
+        return default
+    return value
+
+
 @dataclass(frozen=True)
 class StorageConfig:
+    """How much of a run is kept, and for how long.
+
+    The three numbers below are editable without touching this file:
+    `python -m tools.storage_policy` writes data/storage_policy.json and these
+    fields are loaded from it. That matters because the right values depend on
+    the card in the Pi, not on the code - a full-frame JPEG off this bench is
+    ~850 kB, so at the 45 s cadence keeping every 4th frame is about 400 MB a
+    day, and the defaults here will fill a 32 GB card in roughly ten weeks.
+    """
+
     db_path: Path = DATA_DIR / "monitor.sqlite3"
     snapshot_dir: Path = DATA_DIR / "snapshots"
 
@@ -407,15 +453,24 @@ class StorageConfig:
 
     # Keep a full-frame JPEG every so often so a run can be reviewed later.
     # 0 disables. At 45 s cadence, every 4th frame is one image per 3 minutes.
-    snapshot_every_n_frames: int = 4
+    snapshot_every_n_frames: int = field(
+        default_factory=lambda: _policy_value("snapshot_every_n_frames", 4))
     snapshot_jpeg_quality: int = 85
+
+    # Hard cap on stored snapshots, oldest deleted first. 0 means no cap and
+    # retention_days is the only limit. A cap is the honest way to bound an SD
+    # card: days say nothing about how much a day costs.
+    max_snapshots: int = field(
+        default_factory=lambda: _policy_value("max_snapshots", 0))
 
     # Per-crucible crops are what the colour-change comparison needs to diff
     # against. Kept in memory by pipeline.history; written to disk only when
     # an event fires, so a normal run does not fill the SD card.
     save_crop_on_event: bool = True
 
-    retention_days: int = 30     # 0 disables pruning
+    # 0 disables pruning. Applied at startup by main.py, not only on request.
+    retention_days: int = field(
+        default_factory=lambda: _policy_value("retention_days", 30))
 
 
 STORAGE = StorageConfig()

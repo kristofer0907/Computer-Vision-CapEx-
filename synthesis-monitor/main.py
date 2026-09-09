@@ -171,6 +171,7 @@ class Monitor:
 
         if self.persist:
             self.db = Database()
+            self._apply_storage_policy()
             self.run_id = self.db.start_run(
                 rgb_source=self.camera.name, note=self.note,
                 simulated=self.camera.simulated)
@@ -183,6 +184,28 @@ class Monitor:
         log.info("monitor started: camera=%s localiser=%s zones=%s",
                  self.camera.name, self.localizer.name,
                  ", ".join(self.tracker.coordinator.trackers) or "none")
+
+    def _apply_storage_policy(self) -> None:
+        """Enforce the operator's policy once, before the run starts writing.
+
+        Set with `python -m tools.storage_policy`. Applied here rather than on
+        a timer: the policy only needs to hold across runs, and a delete
+        running underneath a live capture loop is a way to lose the frame that
+        mattered. A storage failure must not stop a run, so this reports and
+        continues.
+        """
+        try:
+            rows = self.db.prune()
+            by_age = self.snapshots.prune()
+            over_cap = self.snapshots.enforce_max()
+        except Exception:
+            log.exception("could not apply the storage policy - continuing")
+            return
+        if rows or by_age or over_cap:
+            log.info("storage policy: removed %d rows, %d snapshots past "
+                     "%d days, %d over the %d cap",
+                     sum(rows.values()), by_age, STORAGE.retention_days,
+                     over_cap, STORAGE.max_snapshots)
 
     def _spawn(self, target, name: str) -> None:
         t = threading.Thread(target=target, name=name, daemon=True)
@@ -282,9 +305,20 @@ class Monitor:
             slot_occupancy(coord, REGION_TRACKING.collection_zone),
             now, heater_pos=slot_positions(coord, REGION_TRACKING.heating_zone))
 
+        # every_n of 0 means never. It used to fall through max(1, 0) and save
+        # every single frame, which is the opposite of what the config says and
+        # the fastest way to fill a card.
         frame_ref = ""
-        if self.persist and self._frames % max(1, STORAGE.snapshot_every_n_frames) == 0:
+        every_n = STORAGE.snapshot_every_n_frames
+        if self.persist and every_n > 0 and self._frames % every_n == 0:
             frame_ref = self.snapshots.save_frame(image, frame.frame_id, now) or ""
+            # Hold the cap during the run, not just at startup: a long run is
+            # exactly when a bounded card stops being bounded.
+            if frame_ref and STORAGE.max_snapshots:
+                try:
+                    self.snapshots.enforce_max()
+                except Exception:
+                    log.exception("could not enforce the snapshot cap")
 
         crops, masks, boxes = {}, {}, {}
         for t in tracks:

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 import cv2
@@ -99,6 +99,87 @@ class SnapshotStore:
     def resolve(self, relative: str) -> Path:
         """Relative path from the database back to an absolute one."""
         return self.root / relative
+
+    def _files(self) -> list[Path]:
+        """Every stored JPEG, oldest first by the day directory then name."""
+        out: list[Path] = []
+        for child in sorted(self.root.iterdir()):
+            if not child.is_dir():
+                continue
+            try:
+                datetime.strptime(child.name, "%Y-%m-%d")
+            except ValueError:
+                continue    # not one of ours, leave it alone
+            out.extend(sorted(child.iterdir()))
+        return out
+
+    def usage(self) -> tuple[int, int]:
+        """(file count, total bytes). What an operator needs before deciding."""
+        files = self._files()
+        return len(files), sum(f.stat().st_size for f in files if f.is_file())
+
+    def delete_between(self, start: date, end: date) -> int:
+        """Remove snapshots for days in [start, end], both inclusive.
+
+        Day granularity, because that is how they are stored - anything finer
+        would promise a precision the directory layout does not have.
+        """
+        if end < start:
+            raise ValueError("end date must not be before start date")
+        removed = 0
+        for child in sorted(self.root.iterdir()):
+            if not child.is_dir():
+                continue
+            try:
+                day = datetime.strptime(child.name, "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if start <= day <= end:
+                removed += self._remove_day(child)
+        log.info("removed %d snapshots between %s and %s", removed, start, end)
+        return removed
+
+    def clear_all(self) -> int:
+        """Remove every stored snapshot. The root directory stays."""
+        removed = 0
+        for child in sorted(self.root.iterdir()):
+            if child.is_dir():
+                removed += self._remove_day(child)
+        log.warning("cleared %d snapshots", removed)
+        return removed
+
+    def enforce_max(self, max_files: int | None = None) -> int:
+        """Keep only the newest `max_files` snapshots. 0 means no cap.
+
+        A count is the only limit that actually bounds a card: retention in
+        days says nothing about how much a day costs, and that varies with the
+        cadence the operator picked.
+        """
+        cap = STORAGE.max_snapshots if max_files is None else max_files
+        if cap <= 0:
+            return 0
+        files = [f for f in self._files() if f.is_file()]
+        excess = len(files) - cap
+        if excess <= 0:
+            return 0
+        for f in files[:excess]:
+            f.unlink(missing_ok=True)
+        self._drop_empty_days()
+        log.info("snapshot cap %d exceeded, removed the %d oldest", cap, excess)
+        return excess
+
+    def _remove_day(self, day_dir: Path) -> int:
+        removed = 0
+        for f in day_dir.iterdir():
+            f.unlink(missing_ok=True)
+            removed += 1
+        day_dir.rmdir()
+        return removed
+
+    def _drop_empty_days(self) -> None:
+        for child in self.root.iterdir():
+            if child.is_dir() and not any(child.iterdir()):
+                child.rmdir()
 
     def prune(self, retention_days: int | None = None) -> int:
         """Remove whole day directories older than the retention window."""
