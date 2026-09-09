@@ -4,7 +4,8 @@
     python main.py --rgb mock               # synthetic platform, no hardware
     python main.py --rgb file --file run/   # replay a folder of stills or a video
     python main.py --no-persist             # do not write to SQLite
-    python main.py --no-thermal             # skip the MLX90640
+    python main.py --no-thermal             # skip the thermal logger
+    python main.py --rgb-interval 15 --thermal-interval 3    # pin the cadence
 
 Open http://<host>:5000/. From the laptop over the ICS link that is the Pi's
 address on 192.168.137.x.
@@ -37,8 +38,8 @@ from datetime import datetime
 
 import numpy as np
 
-from config import (DASHBOARD, GEOMETRY, REGION_TRACKING, SOURCES, STORAGE,
-                    ZONES, ensure_dirs)
+from config import (CADENCE, DASHBOARD, GEOMETRY, REGION_TRACKING, SOURCES,
+                    STORAGE, ZONES, ensure_dirs)
 from drivers.base import Frame, HardwareUnavailable
 from drivers.rgb_cam import create_camera, encode_jpeg
 from pipeline import roi
@@ -94,11 +95,19 @@ class Monitor:
                  persist: bool = True,
                  store_thermal_grid: bool = False,
                  note: str | None = None,
-                 draw_overlay: bool = True) -> None:
+                 draw_overlay: bool = True,
+                 rgb_interval_s: float | None = None,
+                 thermal_interval_s: float | None = None) -> None:
         self.rgb_backend = rgb_backend
         self.thermal_backend = thermal_backend
         self.localizer_name = localizer
         self.enable_thermal = enable_thermal
+        # None means the adaptive cadence: slow while the bench is still, fast
+        # while anything is moving. A number pins the interval and takes the
+        # CadenceController out of the loop, which is what you want when
+        # comparing runs or watching one stage.
+        self.rgb_interval_s = rgb_interval_s
+        self.thermal_interval_s = thermal_interval_s
         self.persist = persist
         self.store_thermal_grid = store_thermal_grid
         self.note = note
@@ -114,7 +123,8 @@ class Monitor:
         self.run_id: int | None = None
 
         self.camera = None
-        self.db: Database | None = None
+        self.db: Database | None = None       # main thread: run start/end
+        self._vision_db: Database | None = None  # the vision thread's own
         self.snapshots = SnapshotStore()
         self.localizer = None
         self.tracker: RegionTracker | None = None
@@ -134,6 +144,11 @@ class Monitor:
     # ------------------------------------------------------------- lifecycle
     def start(self) -> None:
         self._started_at = time.time()
+        # Set before the first frame so the loop's first sleep is the real
+        # interval rather than zero.
+        self._interval_s = (CADENCE.analysis_interval_s
+                            if self.rgb_interval_s is None
+                            else self.rgb_interval_s)
         self.camera = create_camera(self.rgb_backend)
         self.camera.start()
 
@@ -209,6 +224,18 @@ class Monitor:
         status = WorkerStatus(worker="vision", source=self.camera.name,
                               simulated=self.camera.simulated)
         self.status["processing"] = status
+
+        # This thread's own connection. sqlite3 objects are bound to the
+        # thread that created them, and self.db belongs to the main thread,
+        # which opened the run. Same pattern the thermal logger uses: open
+        # here, adopt the run that already exists.
+        if self.persist and self.run_id is not None:
+            try:
+                self._vision_db = Database()
+                self._vision_db.attach_run(self.run_id)
+            except Exception:
+                log.exception("could not open the database for the vision "
+                              "loop - continuing without logging")
         while not self._stop.is_set():
             started = time.time()
             try:
@@ -231,7 +258,11 @@ class Monitor:
             # Sleep the remainder of the interval, not the whole of it, so a
             # slow frame does not push the cadence out.
             self._stop.wait(max(0.0, self._interval_s - (time.time() - started)))
+
         status.alive = False
+        if self._vision_db is not None:
+            self._vision_db.close()
+            self._vision_db = None
 
     def process(self, frame: Frame) -> PipelineResult:
         """One frame, end to end. The only place the pipeline order lives."""
@@ -291,7 +322,11 @@ class Monitor:
                 warnings.append("run stopped by a latched hazard")
             self._stop.set()
 
-        self._interval_s = self.cadence.observe(tracks)
+        # observe() is fed either way, so the controller's motion state stays
+        # meaningful and --rgb-interval only overrides what it decides.
+        adaptive = self.cadence.observe(tracks)
+        self._interval_s = (adaptive if self.rgb_interval_s is None
+                            else self.rgb_interval_s)
         self._frames += 1
 
         overlay = None
@@ -299,7 +334,7 @@ class Monitor:
             overlay = encode_jpeg(self._overlay(image, tracks, coord, results),
                                   DASHBOARD.jpeg_quality)
 
-        return PipelineResult(
+        result = PipelineResult(
             frame_id=frame.frame_id, timestamp=now, source=frame.source,
             simulated=frame.simulated, crucibles=reports,
             events=[_as_event(r, frame.frame_id) for r in results],
@@ -307,14 +342,29 @@ class Monitor:
             overlay_jpeg=overlay, warnings=warnings,
         )
 
+        # The per-frame history: one frames row and one crucible_samples row
+        # per tracked crucible. anomaly_events above is the operator's alarm
+        # log and only holds failures; this is the record of what was on the
+        # bench, and it is what /api/crucibles/<id>/series reads back.
+        if self._vision_db is not None:
+            try:
+                self._vision_db.log_result(result, snapshot_path=frame_ref or None)
+            except Exception:
+                # A storage failure must not take the loop down: the point of
+                # the run is watching the bench, not filling a table.
+                log.exception("could not log frame %d", frame.frame_id)
+                warnings.append("storage: frame not logged")
+
+        return result
+
     def _record(self, results: list[AnomalyResult], frame_id: int) -> None:
         """Tripped checks go to SQLite and to the dashboard's event ring."""
         for r in results:
             if not getattr(r, "tripped", False):
                 continue
             self.events.extend([_as_event(r, frame_id)])
-            if self.db is not None:
-                self.db.write_event(r)
+            if self._vision_db is not None:
+                self._vision_db.write_event(r)
             log.error("ANOMALY %s in %s (frame %s)",
                       r.failure_type, r.zone, r.frame_ref or frame_id)
 
@@ -392,6 +442,7 @@ class Monitor:
         try:
             thermal_worker(self._thermal_q, status_q, self._stop,
                            run_id=self.run_id, backend=self.thermal_backend,
+                           interval_s=self.thermal_interval_s,
                            store_grid=self.store_thermal_grid)
         except Exception:
             log.warning("thermal logger stopped", exc_info=True)
@@ -423,6 +474,15 @@ def _as_event(result: AnomalyResult, frame_id: int) -> Event:
     )
 
 
+def _positive_seconds(value: str) -> float:
+    """An interval argparse will reject rather than let the loop spin on."""
+    seconds = float(value)
+    if seconds <= 0.0:
+        raise argparse.ArgumentTypeError(
+            f"interval must be greater than zero, got {value}")
+    return seconds
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="CapEx synthesis monitor",
@@ -443,6 +503,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                       help="localiser to use; see pipeline/localize.py")
     pipe.add_argument("--no-overlay", action="store_true",
                       help="skip drawing the annotated preview")
+
+    cad = p.add_argument_group("cadence (seconds between frames)")
+    cad.add_argument("--rgb-interval", type=_positive_seconds, default=None,
+                     metavar="SECONDS",
+                     help=f"fixed seconds between analysis frames. Default is "
+                          f"adaptive: {CADENCE.analysis_interval_s:.0f}s when "
+                          f"the bench is still, "
+                          f"{CADENCE.analysis_interval_busy_s:.0f}s while "
+                          f"anything is moving")
+    cad.add_argument("--thermal-interval", type=_positive_seconds, default=None,
+                     metavar="SECONDS",
+                     help=f"seconds between thermal frames "
+                          f"(default {CADENCE.thermal_interval_s:.0f})")
 
     store = p.add_argument_group("storage")
     store.add_argument("--no-persist", action="store_true",
@@ -490,6 +563,8 @@ def main(argv: list[str] | None = None) -> int:
         store_thermal_grid=args.store_thermal_grid,
         note=args.note,
         draw_overlay=not args.no_overlay,
+        rgb_interval_s=args.rgb_interval,
+        thermal_interval_s=args.thermal_interval,
     )
 
     def handle_signal(signum, _frame):
