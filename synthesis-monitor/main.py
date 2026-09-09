@@ -431,7 +431,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     src = p.add_argument_group("sources")
     src.add_argument("--rgb", choices=["auto", "picamera2", "mock", "file"],
                      default=None, help="RGB backend (default: config / auto)")
-    src.add_argument("--thermal", choices=["auto", "mlx90640", "mock"],
+    src.add_argument("--thermal", choices=["auto", "lepton", "mlx90640", "mock"],
                      default=None, help="thermal backend")
     src.add_argument("--file", default=None,
                      help="video or stills directory for --rgb file")

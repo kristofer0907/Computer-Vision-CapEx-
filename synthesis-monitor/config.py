@@ -152,7 +152,7 @@ class SourceConfig:
     """
 
     rgb_backend: str = os.environ.get("CAPEX_RGB_BACKEND", "auto")  # auto|picamera2|mock|file
-    thermal_backend: str = os.environ.get("CAPEX_THERMAL_BACKEND", "auto")  # auto|mlx90640|mock
+    thermal_backend: str = os.environ.get("CAPEX_THERMAL_BACKEND", "auto")  # auto|lepton|mlx90640|mock
 
     # file backend: replay a recorded video or a directory of stills
     rgb_file_path: str = os.environ.get("CAPEX_RGB_FILE", "")
@@ -171,6 +171,12 @@ class SourceConfig:
     picamera2_format: str = "RGB888"     # not XRGB8888: avoids alpha/BGR confusion
     mlx90640_i2c_hz: int = 400_000
     mlx90640_refresh_hz: int = 2
+
+    # PureThermal (FLIR Lepton) over USB/UVC. None auto-discovers the board by
+    # its V4L2 name, which matters because /dev/video0 is usually the laptop's
+    # own webcam - opening it by index silently gives you a picture of yourself
+    # rather than a temperature field.
+    lepton_device: int | None = None
 
 
 SOURCES = SourceConfig()

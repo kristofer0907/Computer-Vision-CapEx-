@@ -55,11 +55,23 @@ median scoring) is anomalous, with no labeled training data required.
     stream all working (`cv2.COLORMAP_INFERNO` + `INTER_NEAREST` upscale)
   - Resolution confirmed insufficient at 80–85cm mounting height: 32×24px
     over 110° FOV at 80cm ≈ 2.4cm/pixel → a crucible spans only ~1–2 pixels
-  - **Decision path**: try the free option first — remount the MLX90640
-    lower, dedicated to just the heater-pad zone (max 2 crucibles) instead of
-    sharing the RGB camera's full-platform height. At h=15cm this gets to
-    ~1.3cm/pixel, no hardware cost. Only escalate to the Lepton upgrade if
-    that's still insufficient.
+  - **Superseded — the Lepton is here.** A PureThermal 3 + Lepton 3.x arrived
+    and is working (`drivers/thermal_cam.py:LeptonSource`, `--thermal lepton`).
+    160×120 over USB/UVC, ~8.8 fps, TLinear radiometric. The MLX90640 backend
+    is kept; `--thermal auto` tries the Lepton first and falls back.
+  - Lepton resolution on the platform (27mm crucible): at h=80cm a 95° part
+    gives 1.09 cm/px = 2.5 px per crucible, a 57° part 0.54 cm/px = 5.0 px.
+    Mounted low over the heater pad at h=15cm those become 0.20 and 0.10
+    cm/px (13 and 27 px). **Which FOV is fitted is not yet confirmed** —
+    that decides whether it can stay on the camera bridge or wants its own
+    low mount.
+  - **Warm-up is real and it lies quietly.** From cold the Lepton reads ~13°C
+    low and drifts down ~2°C/min for the first few minutes (a −14°C indoor
+    minimum), then settles to a correct room reading (16°C median across a
+    13–23°C room, ±0.5°C as the FFC shutter cycles). `LeptonSource.start()`
+    logs the scene median and warns if it is outside an indoor range.
+    Absolute accuracy against a reference is still unverified (part spec
+    ≈ ±5°C); ice water + a hand is the two-minute check.
   - Lepton part decision finalized (if needed): 500-0758-03 (Lepton 3.1R:
     160×120, 95° FOV, radiometric, ~$66–142, short lead time) over
     500-0771-01 (Lepton 3.5: same resolution, narrower 57° FOV — geometrically
