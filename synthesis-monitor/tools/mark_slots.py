@@ -1,9 +1,9 @@
 """Click the fixed slot positions for a stage (e.g. the crucible rack seen in
 a calibration shot), save them as a reference JSON.
 
-    python -m tools.mark_slots --stage filling
-    python -m tools.mark_slots --stage filling --source-image path/to/img.jpg
-    python -m tools.mark_slots --stage filling --radius 22
+    python -m tools.mark_slots --stage storing
+    python -m tools.mark_slots --stage storing --source-image path/to/img.jpg
+    python -m tools.mark_slots --stage storing --radius 22
     python -m tools.mark_slots --stage injection --lane
 
 By default this undistorts the first image in
@@ -29,8 +29,8 @@ guessed default.
 Output (data/slots_<stage>.json by default):
 
     {
-      "stage": "filling",
-      "image": "filling_reference.jpg",
+      "stage": "storing",
+      "image": "storing_reference.jpg",
       "image_size": [4056, 3040],
       "slot_radius_px": 22,
       "slots": [
@@ -40,8 +40,8 @@ Output (data/slots_<stage>.json by default):
     }
 
 Why this exists: mirrors tools/mark_vials.py, but for the *fixed* slot
-layout (crucible rack holes, lidding stations, etc.) rather than per-frame
-vial detections - a one-time reference to check live detections against,
+layout (crucible rack holes, heater pads, etc.) rather than per-frame
+crucible detections - a one-time reference to check live detections against,
 not something re-marked every capture.
 
 --lane switches to a second mode for a region with no fixed slots at all: a
@@ -227,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--stage", required=True,
-                   help="stage name this slot layout belongs to, e.g. filling")
+                   help="stage name this slot layout belongs to, e.g. storing")
     p.add_argument("--source-image",
                    help="image to undistort and use as the reference frame "
                         "(default: first *.jpg in "

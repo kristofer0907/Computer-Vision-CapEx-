@@ -282,7 +282,7 @@ class ZoneEditor:
         """Pairs of zones overlapping by more than `min_fraction` of the smaller.
 
         Not fatal - zone_at resolves ties by process order - but a real
-        overlap is almost always a mis-drag, and a vial inside it gets
+        overlap is almost always a mis-drag, and a crucible inside it gets
         whichever stage comes first rather than the one you meant.
 
         The threshold exists because adjacent zones legitimately share an
@@ -560,12 +560,12 @@ def main(argv: list[str] | None = None) -> int:
 
 def save(editor: ZoneEditor, out: Path) -> int:
     for a, b, fraction in editor.overlaps():
-        log.warning("zones %s and %s overlap by %.0f%% - a vial in the overlap "
+        log.warning("zones %s and %s overlap by %.0f%% - a crucible in the overlap "
                     "will be assigned to whichever comes first in the process "
                     "order", a, b, fraction * 100)
     missing = [s for s in STAGE_ORDER if s != "oven" and s not in editor.zones]
     if missing:
-        log.warning("no polygon for %s - a vial there will be reported unstaged",
+        log.warning("no polygon for %s - a crucible there will be reported unstaged",
                     ", ".join(missing))
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)

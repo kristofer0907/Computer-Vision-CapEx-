@@ -107,7 +107,7 @@ class PiCameraSource(CameraSource):
 
 
 class MockCameraSource(CameraSource):
-    """Synthetic 18-vial platform. Behaves like the real thing on the wire."""
+    """Synthetic 18-crucible platform. Behaves like the real thing on the wire."""
 
     name = "mock"
     simulated = True
@@ -143,7 +143,7 @@ class MockCameraSource(CameraSource):
         sleep_remaining(t_begin, self.latency_s)
         # Timestamp on the SIMULATED clock, not the wall clock. The scene
         # advances at time_scale, so wall-clock stamps would tell the tracker
-        # that vials teleport - and any dt-dependent logic (the association
+        # that crucibles teleport - and any dt-dependent logic (the association
         # gate, dwell times, stall thresholds) would be tested against a lie.
         return Frame(img, self._wall_t0 + sim_t, self._next_id(), self.name,
                      True, truth)
@@ -192,7 +192,7 @@ class FileCameraSource(CameraSource):
 
         # Which file this frame came from, carried on Frame.truth. It is the
         # only way anything downstream can tell one still from another, and
-        # ManualLocalizer keys its hand-marked vial positions off it.
+        # ManualLocalizer keys its hand-marked crucible positions off it.
         origin: dict[str, object] = {}
 
         if self._stills:

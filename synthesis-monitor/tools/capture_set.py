@@ -16,7 +16,7 @@ Manual settings, and which of them software can even reach:
                                     Set them by hand, then do not touch them
                                     again for the life of the dataset.
 
-Defaults lock exposure and white balance because the pipeline compares vials
+Defaults lock exposure and white balance because the pipeline compares crucibles
 across frames and across sessions. Leaving auto-exposure and auto-white-balance
 on lets the camera re-decide what "white" means between two frames, which shows
 up later as a colour anomaly that no chemistry caused. Pass --auto to override,
@@ -56,7 +56,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--jpeg", action="store_true",
                    help="write JPEGs instead of lossless PNG")
     p.add_argument("--note", default=None,
-                   help="free text recorded in session.json, e.g. 'lids off, 12 vials'")
+                   help="free text recorded in session.json, e.g. 'lids off, 12 crucibles'")
 
     cam = p.add_argument_group("camera")
     cam.add_argument("--rgb", default="auto",

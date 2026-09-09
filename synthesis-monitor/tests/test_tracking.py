@@ -1,17 +1,17 @@
-"""Tracking and staging against synthetic centroids.
+"""Stage commitment, oven inference and the analysis cadence.
 
-Deliberately independent of the camera: these are the behaviours that decide
-whether a vial keeps its identity for the length of a run, and they can be
-pinned down before any hardware or any localiser exists.
+These used to be driven through the whole-platform assignment tracker. That
+tracker is gone; the logic it exercised lives in pipeline/zones.StageTracker
+and pipeline/tracking.CadenceController, and is tested directly here.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from config import GEOMETRY
-from pipeline.tracking import CadenceController, HungarianTracker
-from pipeline.types import Detection
+from config import GEOMETRY, TRACKING
+from pipeline.tracking import CadenceController
+from pipeline.types import Track
 from pipeline.zones import StageTracker, ZoneMap, mm_to_px
 
 W, H = GEOMETRY.frame_width_px, GEOMETRY.frame_height_px
@@ -24,152 +24,103 @@ def rect(x0, x1, y0=0.3, y1=0.7):
 @pytest.fixture
 def zones():
     return ZoneMap(W, H, {
-        "filling": rect(0.00, 0.30),
-        "conveyor": rect(0.30, 0.60),
+        "storing": rect(0.00, 0.30),
+        "injection": rect(0.30, 0.60),
         "heating": rect(0.60, 0.90),
     })
 
 
-def det(nx, ny=0.5, r=17.0):
-    """Detection at normalised frame coordinates."""
-    return Detection(cx=nx * W, cy=ny * H, radius=r)
+def track_at(nx, ny=0.5, r=17.0, ts=0.0):
+    """A track positioned at normalised frame coordinates."""
+    return Track(track_id=1, cx=nx * W, cy=ny * H, radius=r,
+                 first_seen_ts=ts, last_seen_ts=ts, confirmed=True)
 
 
-def test_new_detections_become_tracks(zones):
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1)
-    tracks, closed = tracker.update([det(0.1), det(0.15)], 0.0)
-    assert len(tracks) == 2
-    assert not closed
-    assert {t.track_id for t in tracks} == {1, 2}
+def move(track, nx, ny=0.5):
+    track.cx, track.cy = nx * W, ny * H
+    return track
 
 
-def test_identity_survives_movement(zones):
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1)
-    tracker.update([det(0.10), det(0.20)], 0.0)
-    tracks, _ = tracker.update([det(0.12), det(0.22)], 45.0)
-    by_id = {t.track_id: t for t in tracks}
-    assert by_id[1].cx == pytest.approx(0.12 * W)
-    assert by_id[2].cx == pytest.approx(0.22 * W)
-
-
-def test_crossing_paths_do_not_swap_ids(zones):
-    """Two vials whose nearest neighbour is the other one.
-
-    Greedy matching gets this wrong. This is the case the global solve exists
-    for, and it is what a handover on the conveyor looks like.
-    """
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1)
-    tracker.update([det(0.30), det(0.40)], 0.0)
-    tracks, _ = tracker.update([det(0.33), det(0.43)], 10.0)
-    by_id = {t.track_id: t.cx for t in tracks}
-    assert by_id[1] < by_id[2]
-
-
-def test_gate_rejects_teleportation(zones):
-    """A detection beyond the plausible gate starts a new track, not a jump."""
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1,
-                               max_assignment_mm=50.0)
-    tracker.update([det(0.10)], 0.0)
-    tracks, _ = tracker.update([det(0.85)], 45.0)
-    assert len(tracks) == 2
-    assert {t.track_id for t in tracks} == {1, 2}
-
-
-def test_track_survives_a_missed_frame_then_closes(zones):
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1, max_missed_frames=2)
-    tracker.update([det(0.10)], 0.0)
-
-    for i in range(2):
-        tracks, closed = tracker.update([], 10.0 * (i + 1))
-        assert len(tracks) == 1, "should tolerate a brief occlusion"
-        assert not closed
-
-    tracks, closed = tracker.update([], 40.0)
-    assert not tracks
-    assert len(closed) == 1
-
-
-def test_min_hits_suppresses_one_frame_ghosts(zones):
-    tracker = HungarianTracker(zones, min_hits_to_confirm=2)
-    tracks, _ = tracker.update([det(0.10)], 0.0)
-    assert not tracks[0].confirmed
-    tracks, _ = tracker.update([det(0.11)], 45.0)
-    assert tracks[0].confirmed
-
-
+# --------------------------------------------------------------------------
+# Stage commitment
+# --------------------------------------------------------------------------
 def test_first_stage_commits_immediately(zones):
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1)
-    tracks, _ = tracker.update([det(0.10)], 0.0)
-    assert tracks[0].stage == "filling"
+    stages = StageTracker(zones, hysteresis_n=1)
+    t = track_at(0.10)
+    assert stages.update(t, 0.0) == "storing"
+    assert t.stage == "storing"
 
 
 def test_stage_transition_needs_hysteresis(zones):
     """N agreeing frames before a stage change is committed."""
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1,
-                               stage_tracker=StageTracker(zones, hysteresis_n=2))
-    tracker.update([det(0.25)], 0.0)
+    stages = StageTracker(zones, hysteresis_n=2)
+    t = track_at(0.25)
+    # N applies to the first commitment too, so it takes two frames to settle.
+    stages.update(t, 0.0)
+    stages.update(t, 45.0)
+    assert t.stage == "storing"
 
-    # 0.25 -> 0.35 is ~102 mm, well inside the assignment gate, so this is the
-    # same vial moving rather than a new one appearing.
-    tracks, _ = tracker.update([det(0.35)], 45.0)
-    assert tracks[0].stage == "filling", "one frame is not enough"
+    stages.update(move(t, 0.35), 90.0)
+    assert t.stage == "storing", "one frame is not enough"
 
-    tracks, _ = tracker.update([det(0.36)], 90.0)
-    assert tracks[0].stage == "conveyor"
-    assert [s for s, _ in tracks[0].stage_log] == ["filling", "conveyor"]
+    stages.update(move(t, 0.36), 135.0)
+    assert t.stage == "injection"
+    assert [s for s, _ in t.stage_log] == ["storing", "injection"]
 
 
 def test_boundary_flicker_does_not_commit(zones):
     """A centroid oscillating across a zone edge must not log transitions."""
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1,
-                               stage_tracker=StageTracker(zones, hysteresis_n=2))
-    tracker.update([det(0.29)], 0.0)
+    stages = StageTracker(zones, hysteresis_n=2)
+    t = track_at(0.29)
+    stages.update(t, 0.0)
+    stages.update(t, 45.0)          # settle on "storing" first
     for i, x in enumerate([0.31, 0.29, 0.31, 0.29]):
-        tracks, _ = tracker.update([det(x)], 45.0 * (i + 1))
-    assert tracks[0].stage == "filling"
-    assert len(tracks[0].stage_log) == 1
-
-
-def test_disappearing_after_cooling_is_inferred_oven_entry():
-    """The blind spot, pinned so nobody 'fixes' it into a silent failure."""
-    zones = ZoneMap(W, H, {"cooling": rect(0.0, 1.0)})
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1, max_missed_frames=1)
-    tracker.update([det(0.5)], 0.0)
-    tracker.update([], 45.0)
-    _, closed = tracker.update([], 90.0)
-    assert closed[0].closed_reason == "oven"
-
-
-def test_disappearing_elsewhere_is_lost(zones):
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1, max_missed_frames=1)
-    tracker.update([det(0.7)], 0.0)     # heating
-    tracker.update([], 45.0)
-    _, closed = tracker.update([], 90.0)
-    assert closed[0].closed_reason == "lost"
+        stages.update(move(t, x), 90.0 + 45.0 * i)
+    assert t.stage == "storing"
+    assert len(t.stage_log) == 1
 
 
 def test_point_outside_every_polygon_is_unstaged(zones):
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1)
-    tracks, _ = tracker.update([det(0.5, ny=0.05)], 0.0)
-    assert tracks[0].stage is None
+    stages = StageTracker(zones, hysteresis_n=1)
+    t = track_at(0.5, ny=0.05)
+    assert stages.update(t, 0.0) is None
+    assert t.stage is None
 
 
+# --------------------------------------------------------------------------
+# Oven inference - the documented blind spot, pinned so nobody "fixes" it
+# into a silent failure.
+# --------------------------------------------------------------------------
+def test_disappearing_after_the_end_rack_is_inferred_oven_entry(zones):
+    stages = StageTracker(zones, hysteresis_n=1)
+    t = track_at(0.10)
+    t.stage = TRACKING.oven_entry_from
+    assert stages.close_reason(t) == "oven"
+
+
+def test_disappearing_elsewhere_is_lost(zones):
+    stages = StageTracker(zones, hysteresis_n=1)
+    t = track_at(0.70)
+    t.stage = "heating"
+    assert stages.close_reason(t) == "lost"
+
+
+# --------------------------------------------------------------------------
+# Cadence
+# --------------------------------------------------------------------------
 def test_cadence_speeds_up_on_motion_and_releases_slowly():
     from config import CADENCE
 
-    zones = ZoneMap(W, H, {"z": rect(0.0, 1.0)})
-    tracker = HungarianTracker(zones, min_hits_to_confirm=1)
     cadence = CadenceController()
-
-    tracks, _ = tracker.update([det(0.10)], 0.0)
-    assert cadence.observe(tracks) == CADENCE.analysis_interval_s
+    t = track_at(0.10)
+    assert cadence.observe([t]) == CADENCE.analysis_interval_s
 
     moved_px = mm_to_px(CADENCE.busy_motion_mm * 2)
-    tracks, _ = tracker.update([Detection(0.10 * W + moved_px, 0.5 * H, 17.0)], 45.0)
-    assert cadence.observe(tracks) == CADENCE.analysis_interval_busy_s
-    assert cadence.busy
+    t.cx += moved_px
+    assert cadence.observe([t]) == CADENCE.analysis_interval_busy_s
 
+    # Staying still does not release immediately - it takes several quiet
+    # frames, so one noisy centroid cannot flap the cadence.
     for _ in range(CADENCE.busy_release_frames - 1):
-        interval = cadence.observe(tracks)
-        assert interval == CADENCE.analysis_interval_busy_s, "must not flap"
-    assert cadence.observe(tracks) == CADENCE.analysis_interval_s
+        assert cadence.observe([t]) == CADENCE.analysis_interval_busy_s
+    assert cadence.observe([t]) == CADENCE.analysis_interval_s

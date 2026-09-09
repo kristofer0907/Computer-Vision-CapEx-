@@ -43,7 +43,7 @@ log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class HandoffRecord:
-    vial_id: str
+    crucible_id: str
     heater_slot: int
     heater_entry_ts: float
     storage_slot: int
@@ -51,7 +51,7 @@ class HandoffRecord:
 
     def as_dict(self) -> dict[str, Any]:
         return {
-            "vial_id": self.vial_id,
+            "crucible_id": self.crucible_id,
             "heater_slot": self.heater_slot,
             "heater_entry_ts": self.heater_entry_ts,
             "storage_slot": self.storage_slot,
@@ -113,7 +113,7 @@ class HeaterHandoff:
 
         self.storage_ids[slot] = self._held
         self.records.append(HandoffRecord(
-            vial_id=self._held, heater_slot=self.heater_slot,
+            crucible_id=self._held, heater_slot=self.heater_slot,
             heater_entry_ts=self._held_since or timestamp,
             storage_slot=slot, storage_fill_ts=timestamp))
         log.info("handoff: %s heater -> storage slot %d", self._held, slot)
@@ -126,7 +126,7 @@ class HeaterHandoff:
             # one whose crucible was just handed on and replaced between
             # frames - the second never reads empty, so waiting for an
             # empty->occupied edge would miss it.
-            self._held = f"vial-{int(timestamp * 1000)}"
+            self._held = f"crucible-{int(timestamp * 1000)}"
             self._held_since = timestamp
             log.info("heater: %s picked up an id", self._held)
         elif not occupied and self._held is not None:

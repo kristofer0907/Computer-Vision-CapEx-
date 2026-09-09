@@ -22,7 +22,7 @@ for how far to trust that (96.4% against the hand-labelled set, and the
 classes do overlap).
 
 Standalone validation for pipeline/region_trackers.py, same spirit as
-tools/replay.py but without a PipelineRunner: no dashboard, no storage, no
+The headless harness: no dashboard, no storage, no
 main.py. Nothing here is wired into the live pipeline - that is a deliberate
 follow-up once this is proven against real captures.
 
@@ -39,7 +39,7 @@ parent folder) needs --undistort, or slot/lane positions will be off by however
 much the lens distorts near the frame edges.
 
 Writes one annotated JPEG per frame to --overlay-dir and one JSON dump to
---out. Console line per frame, in the spirit of tools/replay.py's summary:
+--out. Console line per frame:
 
     frame 007  storing=4/12  heating=1/2  collection=2/15  injection(queue)=[11,14]  handoffs=1
 """
@@ -60,7 +60,7 @@ import numpy as np
 from config import DATA_DIR, DETECTION, REGION_TRACKING, ensure_dirs
 from pipeline.anomaly import MissingLid
 from pipeline.handoff import HeaterHandoff
-from pipeline.lineage import VialLineage
+from pipeline.lineage import CrucibleLineage
 from pipeline.region_trackers import (FifoTracker, RegionCoordinator, SlotTracker,
                                       create_region_coordinator)
 
@@ -165,12 +165,12 @@ def slot_positions(coord: RegionCoordinator, zone: str) -> dict[int, tuple[float
             if t.slot_id is not None}
 
 
-def short_vial_id(vial_id: str | None) -> str:
+def short_crucible_id(crucible_id: str | None) -> str:
     """Trim an id to something that fits under a crucible: the last four
     digits of its timestamp, which are unique enough to follow by eye."""
-    if not vial_id:
+    if not crucible_id:
         return ""
-    return f"#{vial_id.rsplit('-', 1)[-1][-4:]}"
+    return f"#{crucible_id.rsplit('-', 1)[-1][-4:]}"
 
 
 def track_label(track_id: int) -> str:
@@ -196,7 +196,7 @@ def lid_state(image: np.ndarray, t) -> tuple[str, float | None]:
 
 
 def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
-                 results: dict, lineage: VialLineage | None = None,
+                 results: dict, lineage: CrucibleLineage | None = None,
                  handoff: HeaterHandoff | None = None) -> np.ndarray:
     out = coord.zone_map.draw(image, color=BASE_BGR)
     handed_off = {tid for tid, _from, _to in coord.handoffs_this_frame()}
@@ -257,26 +257,26 @@ def draw_overlay(image: np.ndarray, coord: RegionCoordinator,
             # The id goes inside the disc and the zone just under it: slots
             # sit ~140 px apart, so a wide label above each one collides with
             # its neighbour's.
-            vial_id = None
+            crucible_id = None
             if handoff is not None and t.slot_id is not None:
-                if (zone == REGION_TRACKING.heater_zone
+                if (zone == REGION_TRACKING.heating_zone
                         and t.slot_id == handoff.heater_slot):
-                    vial_id = handoff.held_id
-                elif zone == REGION_TRACKING.cooling_zone:
-                    vial_id = handoff.storage_ids.get(t.slot_id)
-            if vial_id is None and lineage is not None and t.slot_id is not None:
-                if zone == REGION_TRACKING.heater_zone:
-                    vial_id = lineage.vial_on_heater(t.slot_id)
-                elif zone == REGION_TRACKING.cooling_zone:
-                    vial_id = lineage.vial_on_cooling(t.slot_id)
+                    crucible_id = handoff.held_id
+                elif zone == REGION_TRACKING.collection_zone:
+                    crucible_id = handoff.storage_ids.get(t.slot_id)
+            if crucible_id is None and lineage is not None and t.slot_id is not None:
+                if zone == REGION_TRACKING.heating_zone:
+                    crucible_id = lineage.crucible_on_heater(t.slot_id)
+                elif zone == REGION_TRACKING.collection_zone:
+                    crucible_id = lineage.crucible_on_cooling(t.slot_id)
 
             # Where a handoff id exists it IS the identity, so it takes the
             # centre. The SlotTracker number is keyed to the slot, not the
             # crucible - on a heater it stays put across a replacement, which
             # is exactly the thing being corrected, so showing it as the
             # headline number contradicts the mechanism underneath it.
-            if vial_id:
-                headline = short_vial_id(vial_id)
+            if crucible_id:
+                headline = short_crucible_id(crucible_id)
             else:
                 headline = track_label(t.track_id)
 
@@ -321,7 +321,7 @@ def _legend(out: np.ndarray, scale: float, thick: int) -> None:
 
 
 def as_json(name: str, results: dict, coord: RegionCoordinator,
-            image: np.ndarray, lineage: VialLineage | None = None) -> dict:
+            image: np.ndarray, lineage: CrucibleLineage | None = None) -> dict:
     zones = {}
     for zone, (active, _closed) in results.items():
         tracker = coord.trackers[zone]
@@ -434,7 +434,7 @@ def main(argv: list[str] | None = None) -> int:
               f"with tracking overlays.", flush=True)
         print("Press ctrl-c to stop.\n", flush=True)
 
-    lineage = VialLineage()
+    lineage = CrucibleLineage()
     handoff = HeaterHandoff(REGION_TRACKING.handoff_heater_slot)
     missing_lid = MissingLid()
     alerts: list[dict] = []
@@ -459,23 +459,23 @@ def main(argv: list[str] | None = None) -> int:
 
             detections = localizer.locate(frame)
             results = coord.update(detections, frame.timestamp)
-            lineage.update(slot_occupancy(coord, REGION_TRACKING.heater_zone),
-                           slot_occupancy(coord, REGION_TRACKING.cooling_zone),
+            lineage.update(slot_occupancy(coord, REGION_TRACKING.heating_zone),
+                           slot_occupancy(coord, REGION_TRACKING.collection_zone),
                            frame.timestamp,
                            heater_pos=slot_positions(
-                               coord, REGION_TRACKING.heater_zone))
+                               coord, REGION_TRACKING.heating_zone))
             for e in missing_lid.check(
                     frame.image,
-                    slot_positions(coord, REGION_TRACKING.heater_zone),
+                    slot_positions(coord, REGION_TRACKING.heating_zone),
                     frame.timestamp, frame.frame_id):
                 log.error("%s", e.message)
                 alerts.append({"frame": n, "kind": e.kind,
                                "severity": e.severity, "message": e.message,
                                **e.data})
-            heat_occ = slot_occupancy(coord, REGION_TRACKING.heater_zone)
+            heat_occ = slot_occupancy(coord, REGION_TRACKING.heating_zone)
             handoff.update(
                 heat_occ.get(REGION_TRACKING.handoff_heater_slot, False),
-                slot_occupancy(coord, REGION_TRACKING.cooling_zone),
+                slot_occupancy(coord, REGION_TRACKING.collection_zone),
                 frame.timestamp)
 
             name = str((frame.truth or {}).get("name", "")

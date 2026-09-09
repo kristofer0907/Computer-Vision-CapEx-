@@ -96,8 +96,8 @@ class ZoneMap:
     def nearest_zone(self, x: float, y: float) -> tuple[str | None, float]:
         """(name, signed distance in px) of the closest polygon edge.
 
-        Used for diagnostics: a vial that is consistently 5 px outside a zone
-        means the polygon is traced wrong, not that the vial is off-platform.
+        Used for diagnostics: a crucible that is consistently 5 px outside a zone
+        means the polygon is traced wrong, not that the crucible is off-platform.
         """
         best: tuple[str | None, float] = (None, -math.inf)
         pt = (float(x), float(y))
@@ -142,7 +142,7 @@ class ZoneMap:
 class StageTracker:
     """Commits a track's stage only after N consecutive agreeing frames.
 
-    Without hysteresis a vial sitting on a zone boundary, or one centroid
+    Without hysteresis a crucible sitting on a zone boundary, or one centroid
     jittering by a few pixels, would emit a stage transition every frame and
     the timing statistics built on those transitions would be noise.
 
@@ -185,11 +185,11 @@ class StageTracker:
     def close_reason(self, track: Track) -> str:
         """Why a track that stopped being detected ended.
 
-        A vial last confirmed in cooling that disappears is inferred to have
+        A crucible last confirmed in cooling that disappears is inferred to have
         entered the oven, which is outside the camera's view.
 
         KNOWN BLIND SPOT, not solved here: a genuine failure during cooling -
-        the vial knocked over, removed by hand, spilled - produces exactly the
+        the crucible knocked over, removed by hand, spilled - produces exactly the
         same observation as a normal oven entry. The inference is recorded as
         an inference so nothing downstream can mistake it for an observation,
         but it cannot currently be distinguished. Anything that resolves this

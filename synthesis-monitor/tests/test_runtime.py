@@ -113,7 +113,7 @@ def test_index_renders_before_any_frame(client):
 
 def test_state_endpoint_is_valid_with_no_data(client):
     body = client.get("/api/state").get_json()
-    assert body["pipeline"]["n_vials"] == 0
+    assert body["pipeline"]["n_crucibles"] == 0
     assert body["events"] == []
     assert "health" in body
 
@@ -122,12 +122,12 @@ def test_healthz_is_503_without_frames(client):
     assert client.get("/healthz").status_code == 503
 
 
-def test_vials_endpoint_empty(client):
-    assert client.get("/api/vials").get_json()["vials"] == []
+def test_crucibles_endpoint_empty(client):
+    assert client.get("/api/crucibles").get_json()["crucibles"] == []
 
 
 def test_series_requires_a_feature(client):
-    assert client.get("/api/vials/1/series").status_code == 400
+    assert client.get("/api/crucibles/1/series").status_code == 400
 
 
 def test_snapshot_path_traversal_is_refused(client):

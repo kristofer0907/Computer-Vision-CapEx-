@@ -164,7 +164,7 @@ def check_solgel(cycle: Cycle) -> CheckResult:
     the cycle interval, which is why this one will likely be the first to
     need more than a single frame.
     """
-    return _todo("solgel", "needs a per-vial trajectory, not one frame")
+    return _todo("solgel", "needs a per-crucible trajectory, not one frame")
 
 
 def check_color_change(cycle: Cycle) -> CheckResult:
@@ -268,10 +268,10 @@ class MissingLid:
     name = "missing_lid"
     description = "crucible placed on a heater without a lid"
 
-    def __init__(self, heater_zone: str | None = None,
+    def __init__(self, heating_zone: str | None = None,
                  threshold: float | None = None,
                  on_stop: Callable[[Event], None] | None = None) -> None:
-        self.heater_zone = heater_zone or REGION_TRACKING.heater_zone
+        self.heating_zone = heating_zone or REGION_TRACKING.heating_zone
         self.threshold = (DETECTION.lid_score_threshold
                           if threshold is None else threshold)
         #: called once when the stop is raised - the seam a real platform
@@ -330,7 +330,7 @@ class MissingLid:
                          f"lid (score {score:.1f}, below {self.threshold:.1f})"
                          " - stopping"),
                 timestamp=timestamp, frame_id=frame_id,
-                detector=self.name, zone=self.heater_zone,
+                detector=self.name, zone=self.heating_zone,
                 data={"heater_slot": slot, "lid_score": round(score, 1),
                       "threshold": self.threshold, "cx": cx, "cy": cy,
                       "stop_requested": True},

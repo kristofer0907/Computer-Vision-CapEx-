@@ -4,12 +4,12 @@
     python -m tools.inspect_roi --image cal.jpg      # one of your captures
     python -m tools.inspect_roi --images captures/   # every image in a folder
     python -m tools.inspect_roi --zone heating       # zoom one zone
-    python -m tools.inspect_roi --track 3            # zoom one vial
+    python -m tools.inspect_roi --track 3            # zoom one crucible
 
-Vials on a real capture come from the localiser, which by default means the
+Crucibles on a real capture come from the localiser, which by default means the
 hand marks in data/vials.json (see tools/mark_vials.py). Without them a real
-image has no vials to crop and the bench mask is just the zone polygon, so
-mark them once before expecting the per-vial panels to say anything.
+image has no crucibles to crop and the bench mask is just the zone polygon, so
+mark them once before expecting the per-crucible panels to say anything.
 
 Writes a contact sheet to data/inspect/ and prints the numbers alongside it.
 
@@ -107,13 +107,13 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--images", help="a folder of captures")
     p.add_argument("--rgb", default="mock", help="camera backend when capturing")
     p.add_argument("--localizer", default="auto",
-                   help="where vials come from: auto | manual | ground_truth | null")
+                   help="where crucibles come from: auto | manual | ground_truth | null")
     p.add_argument("--zone", help="render this zone's masks in detail")
-    p.add_argument("--track", type=int, help="render this vial's index in detail")
+    p.add_argument("--track", type=int, help="render this crucible's index in detail")
     p.add_argument("--scale", type=float, default=DETECTION.roi_scale,
-                   help="ROI size as a multiple of vial radius")
-    p.add_argument("--all-vials", action="store_true",
-                   help="contact sheet of every vial's crop and mask")
+                   help="ROI size as a multiple of crucible radius")
+    p.add_argument("--all-crucibles", action="store_true",
+                   help="contact sheet of every crucible's crop and mask")
     p.add_argument("--show", action="store_true",
                    help="open a window as well as writing files "
                         "(needs a display; over SSH use ssh -X)")
@@ -167,7 +167,7 @@ def _inspect_one(frame, localizer, args, out_dir: Path, multi: bool,
 
     detections = localizer.locate(frame)
     if not detections:
-        log.warning("  no vials from localiser %r - per-vial panels skipped. "
+        log.warning("  no crucibles from localiser %r - per-crucible panels skipped. "
                     "Mark them with `python -m tools.mark_vials --image <file>`",
                     localizer.name)
 
@@ -186,11 +186,11 @@ def _inspect_one(frame, localizer, args, out_dir: Path, multi: bool,
         x0, y0, x1, y1 = zones.bounds(zone)
         inside = sum(1 for d in detections if x0 <= d.cx < x1 and y0 <= d.cy < y1)
         log.info("  %-9s bounds=(%4d,%3d)-(%4d,%3d)  %6.0f x %5.0f mm  "
-                 "%6d px  %d vials", zone, x0, y0, x1, y1,
+                 "%6d px  %d crucibles", zone, x0, y0, x1, y1,
                  px_to_mm(x1 - x0), px_to_mm(y1 - y0),
                  int(zones.mask(zone).sum() // 255), inside)
 
-    # ------------------------------------------------------------- one vial
+    # ------------------------------------------------------------- one crucible
     if detections:
         pick = args.track if args.track is not None else 0
         target = detections[pick] if 0 <= pick < len(detections) else detections[0]
@@ -201,15 +201,15 @@ def _inspect_one(frame, localizer, args, out_dir: Path, multi: bool,
             b, g, r_, _ = cv2.mean(crop, mask=mask)
             hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
             hm, sm, vm, _ = cv2.mean(hsv, mask=mask)
-            log.info("  vial %d: centre=(%.0f,%.0f) r=%.1f px (%.1f mm dia) "
+            log.info("  crucible %d: centre=(%.0f,%.0f) r=%.1f px (%.1f mm dia) "
                      "crop=%dx%d disc=%d px",
                      pick, target.cx, target.cy, target.radius,
                      px_to_mm(target.radius) * 2, crop.shape[1], crop.shape[0],
                      int(mask.sum() // 255))
             log.info("    mean inside disc: BGR=(%.0f,%.0f,%.0f)  "
                      "HSV=(%.0f,%.0f,%.0f)", b, g, r_, hm, sm, vm)
-            written.append(_write(out_dir / f"{stem}vial.jpg", _tile([
-                _label(crop, f"crop (vial {pick})"),
+            written.append(_write(out_dir / f"{stem}crucible.jpg", _tile([
+                _label(crop, f"crop (crucible {pick})"),
                 _label(mask, "disc mask"),
                 _label(masked, "masked liquid"),
             ], width=180)))
@@ -223,22 +223,22 @@ def _inspect_one(frame, localizer, args, out_dir: Path, multi: bool,
         inside = [(d.cx, d.cy, d.radius) for d in detections
                   if x0 <= d.cx < x1 and y0 <= d.cy < y1]
         bench = roi.exclude_discs(zone_mask, inside, (x0, y0))
-        log.info("  zone %s: %d vials inside, polygon=%d px, bench=%d px "
+        log.info("  zone %s: %d crucibles inside, polygon=%d px, bench=%d px "
                  "(%.0f%% bare surface)", zone_name, len(inside),
                  int(zone_mask.sum() // 255), int(bench.sum() // 255),
                  100.0 * bench.sum() / max(zone_mask.sum(), 1))
         written.append(_write(out_dir / f"{stem}zone.jpg", _tile([
             _label(crop, f"{zone_name} crop"),
             _label(zone_mask, "polygon mask"),
-            _label(bench, "bench mask (vials removed)"),
+            _label(bench, "bench mask (crucibles removed)"),
             _label(cv2.bitwise_and(crop, crop, mask=bench), "bench pixels"),
         ])))
 
-    # -------------------------------------------------------- every vial
-    if args.all_vials and detections:
-        sheet = _vial_sheet(image, detections, args.scale)
+    # -------------------------------------------------------- every crucible
+    if args.all_crucibles and detections:
+        sheet = _crucible_sheet(image, detections, args.scale)
         if sheet is not None:
-            written.append(_write(out_dir / f"{stem}vials_all.jpg", sheet))
+            written.append(_write(out_dir / f"{stem}crucibles_all.jpg", sheet))
 
     if args.show:
         _show(written, name)
@@ -246,12 +246,12 @@ def _inspect_one(frame, localizer, args, out_dir: Path, multi: bool,
     return written
 
 
-def _vial_sheet(image: np.ndarray, detections, scale: float,
+def _crucible_sheet(image: np.ndarray, detections, scale: float,
                 per_row: int = 9) -> np.ndarray | None:
-    """Every vial's crop over its disc mask, in one grid.
+    """Every crucible's crop over its disc mask, in one grid.
 
     This is the view for tuning DETECTION.roi_scale: too small and the crop
-    clips the rim, too large and it swallows the neighbouring vial. Both are
+    clips the rim, too large and it swallows the neighbouring crucible. Both are
     obvious across 18 tiles at once and easy to miss on one.
     """
     tiles = []

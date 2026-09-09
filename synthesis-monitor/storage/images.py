@@ -89,7 +89,7 @@ class SnapshotStore:
         """The close-up that justified an event.
 
         Worth having for exactly one reason: when a researcher asks two weeks
-        later why vial 7 was flagged, "here is the picture it was flagged on"
+        later why crucible 7 was flagged, "here is the picture it was flagged on"
         is an answer and a robust z-score is not.
         """
         safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in kind)[:32]

@@ -113,17 +113,17 @@
     </section>
 
     <section class="panel">
-      <h2><span>Vials</span><span class="sub" id="vial-count"></span></h2>
+      <h2><span>Crucibles</span><span class="sub" id="crucible-count"></span></h2>
       <div class="scroll">
         <table>
           <thead><tr>
             <th>ID</th><th>Stage</th><th>In stage</th><th>Age</th>
             <th>Position</th><th>Features</th>
           </tr></thead>
-          <tbody id="vials"></tbody>
+          <tbody id="crucibles"></tbody>
         </table>
       </div>
-      <div class="empty" id="vials-empty">No vials tracked. The localiser is a
+      <div class="empty" id="crucibles-empty">No crucibles tracked. The localiser is a
         stub — implement <code>pipeline/localize.py</code>, or run against the
         simulator to exercise the rest.</div>
     </section>
@@ -133,7 +133,7 @@
       <div class="scroll">
         <table>
           <thead><tr>
-            <th>Time</th><th>Severity</th><th>Detector</th><th>Vial</th><th>Message</th>
+            <th>Time</th><th>Severity</th><th>Detector</th><th>Crucible</th><th>Message</th>
           </tr></thead>
           <tbody id="events"></tbody>
         </table>
@@ -185,12 +185,12 @@ function featureSummary(f) {
        + (keys.length > 3 ? ` <span class="muted">+${keys.length - 3}</span>` : '');
 }
 
-function renderVials(vials) {
-  const body = document.getElementById('vials');
-  document.getElementById('vials-empty').hidden = vials.length > 0;
-  document.getElementById('vial-count').textContent =
-    vials.length ? `${vials.length} tracked` : '';
-  body.innerHTML = vials.map(v => `<tr>
+function renderCrucibles(crucibles) {
+  const body = document.getElementById('crucibles');
+  document.getElementById('crucibles-empty').hidden = crucibles.length > 0;
+  document.getElementById('crucible-count').textContent =
+    crucibles.length ? `${crucibles.length} tracked` : '';
+  body.innerHTML = crucibles.map(v => `<tr>
       <td>${v.track_id}</td>
       <td>${esc(v.stage) || '<span class="muted">—</span>'}</td>
       <td>${secs(v.time_in_stage_s)}</td>
@@ -272,7 +272,7 @@ async function refresh() {
       .map(([k, v]) => `${k} ${v}ms`).join(' · ');
     document.getElementById('pipe-stats').innerHTML =
       `<div><span>frame</span> <b>${p.frame_id ?? '—'}</b></div>
-       <div><span>vials</span> <b>${p.n_vials ?? 0}</b></div>
+       <div><span>crucibles</span> <b>${p.n_crucibles ?? 0}</b></div>
        <div><span>age</span> <b>${secs(p.age_s)}</b></div>
        <div class="muted">${esc(timings)}</div>`;
 
@@ -281,7 +281,7 @@ async function refresh() {
     warnBox.innerHTML = (p.warnings || []).map(w => `<div>${esc(w)}</div>`).join('');
 
     renderStages(p.stage_counts || {});
-    renderVials(p.vials || []);
+    renderCrucibles(p.crucibles || []);
     renderEvents(st.events || []);
     renderWorkers(h);
   } catch (err) { console.error(err); }

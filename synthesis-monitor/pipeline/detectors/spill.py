@@ -3,16 +3,16 @@
 Plan on record: see whether wetted aluminium is detectable at all; fall back
 to filter paper that has to be replaced after every spill if it is not.
 
-This is the only detector whose subject is the bench rather than a vial, so
+This is the only detector whose subject is the bench rather than a crucible, so
 the context gives it a different view:
 
     ctx.zones["filling"].image        BGR crop of the zone's bounding box
     ctx.zones["filling"].bench_mask   the zone polygon with a disc punched out
-                                      around every vial in it - bare surface
-                                      only, so a vial's own colour cannot read
+                                      around every crucible in it - bare surface
+                                      only, so a crucible's own colour cannot read
                                       as a wet patch
-    ctx.zones["filling"].zone_mask    the polygon without the vials removed
-    ctx.zones[...].track_ids          which vials are in that zone right now
+    ctx.zones["filling"].zone_mask    the polygon without the crucibles removed
+    ctx.zones[...].track_ids          which crucibles are in that zone right now
 
 A reference frame of the clean bench is the missing piece and this module is
 where it belongs. Nothing upstream keeps one, because what counts as "clean"
@@ -22,11 +22,11 @@ behave differently when someone leaves a glove on the bench.
 
 On the aluminium-versus-filter-paper question, what the optics already imply:
 
-  * Cross-polarisation is fitted to kill specular glare off the glass vials.
+  * Cross-polarisation is fitted to kill specular glare off the glass crucibles.
     Bare aluminium is a specular surface and a thin wet film on it shows up
     largely *as* a change in specularity - so the polarisers that make the
-    vials readable are actively working against the easiest spill signal.
-    Rotating them is not an option; the vials are the primary subject.
+    crucibles readable are actively working against the easiest spill signal.
+    Rotating them is not an option; the crucibles are the primary subject.
 
   * That pushes towards the residual cues: a wet film changes the diffuse
     colour and the local texture slightly, and a pooled drop has an edge.
@@ -53,4 +53,4 @@ from pipeline.detectors.base import NotImplementedDetector
 
 class SpillDetector(NotImplementedDetector):
     name = "spill"
-    description = "Liquid on the bench surface between the vials"
+    description = "Liquid on the bench surface between the crucibles"

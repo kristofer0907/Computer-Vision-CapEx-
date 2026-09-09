@@ -1,12 +1,12 @@
-"""Click the vials in your own captures, save them to data/vials.json.
+"""Click the crucibles in your own captures, save them to data/vials.json.
 
     python -m tools.mark_vials --image capture.jpg
     python -m tools.mark_vials --images captures/          # a whole folder
     python -m tools.mark_vials --image capture.jpg --key default
 
 Controls:
-    left click      place a vial at the cursor
-    right click     remove the nearest vial
+    left click      place a crucible at the cursor
+    right click     remove the nearest crucible
     + / -           grow / shrink the radius (applies to all)
     g               auto-place a grid inside a zone (then nudge by hand)
     c               clear this image
@@ -14,9 +14,9 @@ Controls:
     s               save and quit
     q / ESC         quit without saving
 
-Why this exists: until a real localiser is written, nothing can find vials in
+Why this exists: until a real localiser is written, nothing can find crucibles in
 a real photograph, so a real capture goes through the pipeline showing zero
-vials and every downstream check is vacuously fine. Marking them once by hand
+crucibles and every downstream check is vacuously fine. Marking them once by hand
 turns a folder of your own images into a working end-to-end fixture - real
 pixels, real colours, real illumination gradients - for the tracker, the ROI
 crops, the masks, the features and the detectors.
@@ -41,13 +41,13 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from config import GEOMETRY, VIALS_FILE, ZONES, ensure_dirs
+from config import GEOMETRY, CRUCIBLES_FILE, ZONES, ensure_dirs
 from pipeline.zones import ZoneMap, px_to_mm
 
 log = logging.getLogger("mark")
 
-WINDOW = "mark vials - click to place, s save, q quit"
-VIAL_BGR = (110, 199, 98)
+WINDOW = "mark crucibles - click to place, s save, q quit"
+CRUCIBLE_BGR = (110, 199, 98)
 ZONE_BGR = (90, 110, 130)
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 
@@ -94,12 +94,12 @@ class Marker:
         out = self.zones.draw(self.image, ZONE_BGR)
         for i, (x, y) in enumerate(self.points):
             c = (int(round(x)), int(round(y)))
-            cv2.circle(out, c, int(round(self.radius)), VIAL_BGR, 1, cv2.LINE_AA)
-            cv2.drawMarker(out, c, VIAL_BGR, cv2.MARKER_CROSS, 6, 1)
+            cv2.circle(out, c, int(round(self.radius)), CRUCIBLE_BGR, 1, cv2.LINE_AA)
+            cv2.drawMarker(out, c, CRUCIBLE_BGR, cv2.MARKER_CROSS, 6, 1)
             cv2.putText(out, str(i), (c[0] + 6, c[1] - 6),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.35, VIAL_BGR, 1, cv2.LINE_AA)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.35, CRUCIBLE_BGR, 1, cv2.LINE_AA)
 
-        banner = (f"{self.name}   {len(self.points)} vials   "
+        banner = (f"{self.name}   {len(self.points)} crucibles   "
                   f"r={self.radius:.0f}px ({px_to_mm(self.radius) * 2:.0f}mm dia)"
                   f"   [+/- radius, g grid, c clear, n next, s save]")
         cv2.rectangle(out, (0, 0), (out.shape[1], 24), (20, 22, 26), -1)
@@ -145,11 +145,11 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--images", help="a folder of captures to mark in sequence")
     p.add_argument("--key", help="store under this key instead of the filename "
                                  "(use 'default' to apply to every image)")
-    p.add_argument("--radius", type=float, default=GEOMETRY.vial_radius_px,
-                   help="starting vial radius in pixels")
+    p.add_argument("--radius", type=float, default=GEOMETRY.crucible_radius_px,
+                   help="starting crucible radius in pixels")
     p.add_argument("--grid", nargs="?", const="", metavar="ZONE",
                    help="pre-place a 2x9 grid in this zone")
-    p.add_argument("--out", default=str(VIALS_FILE))
+    p.add_argument("--out", default=str(CRUCIBLES_FILE))
     p.add_argument("--merge", action="store_true",
                    help="keep entries already in the output file")
     args = p.parse_args(argv)
@@ -208,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     entries = {k: v for k, v in result.items() if isinstance(v, list)}
     log.info("wrote %d entries to %s", len(entries), out_path)
     for k, v in entries.items():
-        log.info("  %-24s %d vials", k, len(v))
+        log.info("  %-24s %d crucibles", k, len(v))
     log.info("now: python -m tools.replay --rgb file --file <your images> "
              "--localizer manual")
     return 0

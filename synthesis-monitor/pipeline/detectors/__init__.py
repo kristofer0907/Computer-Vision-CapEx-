@@ -12,11 +12,13 @@ from config import DETECTION
 from pipeline.detectors.base import (Detector, DetectionContext, ZoneView,
                                      NotImplementedDetector)
 from pipeline.detectors.color_change import ColorChangeDetector
-from pipeline.detectors.solgel import SolGelDetector
+from pipeline.detectors.misplaced_labware import MisplacedLabwareDetector
+from pipeline.detectors.missing_crucible import MissingCrucibleDetector
+from pipeline.detectors.missing_lid import MissingLidDetector
+from pipeline.detectors.sol_gel_transition import SolGelTransitionDetector
 from pipeline.detectors.spill import SpillDetector
 from pipeline.detectors.turbidity import TurbidityDetector
-from pipeline.detectors.vial_presence import VialPresenceDetector
-from pipeline.types import Event
+from pipeline.types import AnomalyResult
 
 log = logging.getLogger(__name__)
 
@@ -25,10 +27,12 @@ __all__ = ["Detector", "DetectionContext", "ZoneView", "NotImplementedDetector",
 
 REGISTRY: dict[str, type[Detector]] = {
     TurbidityDetector.name: TurbidityDetector,
-    SolGelDetector.name: SolGelDetector,
+    SolGelTransitionDetector.name: SolGelTransitionDetector,
     ColorChangeDetector.name: ColorChangeDetector,
     SpillDetector.name: SpillDetector,
-    VialPresenceDetector.name: VialPresenceDetector,
+    MissingCrucibleDetector.name: MissingCrucibleDetector,
+    MisplacedLabwareDetector.name: MisplacedLabwareDetector,
+    MissingLidDetector.name: MissingLidDetector,
 }
 
 
@@ -83,9 +87,9 @@ class DetectorHost:
                 log.warning("detector %r failed to stop", d.name, exc_info=True)
         self._started = False
 
-    def run(self, ctx: DetectionContext) -> tuple[list[Event], list[str]]:
-        """(events from every healthy detector, warnings about the unhealthy)."""
-        events: list[Event] = []
+    def run(self, ctx: DetectionContext) -> tuple[list[AnomalyResult], list[str]]:
+        """(verdicts from every healthy detector, warnings about the unhealthy)."""
+        events: list[AnomalyResult] = []
         warnings: list[str] = []
 
         for d in self.detectors:

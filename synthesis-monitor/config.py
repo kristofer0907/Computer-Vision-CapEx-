@@ -8,7 +8,7 @@ Two kinds of setting live in this file and they are NOT equivalent:
     real decisions and are safe to trust.
   * Detection values (anything under DETECTION). These are placeholders with
     no empirical basis. HSV/texture thresholds and anomaly scoring cannot be
-    pre-tuned without real captured vial images — they are here so the
+    pre-tuned without real captured crucible images — they are here so the
     detector modules have somewhere to read from, not because the numbers
     mean anything yet.
 """
@@ -50,16 +50,16 @@ class GeometryConfig:
     frame_width_px: int = 4056
     frame_height_px: int = 3040
     horizontal_coverage_mm: float = 1021.0
-    vial_diameter_mm: float = 27.0
-    n_vials: int = 18
+    crucible_diameter_mm: float = 27.0
+    n_crucibles: int = 18
 
     @property
     def px_per_mm(self) -> float:
         return self.frame_width_px / self.horizontal_coverage_mm
 
     @property
-    def vial_radius_px(self) -> float:
-        return 0.5 * self.vial_diameter_mm * self.px_per_mm
+    def crucible_radius_px(self) -> float:
+        return 0.5 * self.crucible_diameter_mm * self.px_per_mm
 
     @property
     def platform_band_px(self) -> tuple[int, int]:
@@ -81,25 +81,28 @@ def _band_rect(x0: float, x1: float, y0: float = 0.27, y1: float = 0.73):
     return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
 
 
+# Named for the real bench, in process order, matching data/zones.json and
+# REGION_TRACKING.region_sequence. These are placeholder rectangles - only the
+# names are authoritative; the shapes come from data/zones.json once traced.
 _DEFAULT_POLYGONS: dict[str, list[tuple[float, float]]] = {
-    "filling": _band_rect(0.02, 0.32),
-    "conveyor": _band_rect(0.32, 0.56),
-    "lidding": _band_rect(0.56, 0.68),
-    "heating": _band_rect(0.68, 0.82),
-    "cooling": _band_rect(0.82, 0.97),
+    "storing": _band_rect(0.02, 0.30),
+    "injection": _band_rect(0.30, 0.56),
+    "heating": _band_rect(0.56, 0.78),
+    "collection": _band_rect(0.78, 0.97),
 }
 
-# Process order.
+# Process order. The one stage vocabulary in this project: every zone name in
+# config, data/, the trackers and the detectors is one of these four.
 STAGE_ORDER: tuple[str, ...] = (
     "storing", "injection", "heating", "collection",
 )
 
 ZONES_FILE = DATA_DIR / "zones.json"
 
-# Hand-marked vial positions, produced by tools/mark_vials.py and read by
+# Hand-marked crucible positions, produced by tools/mark_vials.py and read by
 # pipeline.localize.ManualLocalizer. Lets a folder of real captured images run
 # through the whole pipeline before a real localiser exists.
-VIALS_FILE = Path(os.environ.get("CAPEX_VIALS_FILE", DATA_DIR / "vials.json"))
+CRUCIBLES_FILE = Path(os.environ.get("CAPEX_CRUCIBLES_FILE", DATA_DIR / "vials.json"))
 
 
 def _load_polygons() -> dict[str, list[tuple[float, float]]]:
@@ -149,7 +152,7 @@ class SourceConfig:
     """
 
     rgb_backend: str = os.environ.get("CAPEX_RGB_BACKEND", "auto")  # auto|picamera2|mock|file
-    thermal_backend: str = os.environ.get("CAPEX_THERMAL_BACKEND", "auto")  # auto|mlx90640|mock
+    thermal_backend: str = os.environ.get("CAPEX_THERMAL_BACKEND", "auto")  # auto|lepton|mlx90640|mock
 
     # file backend: replay a recorded video or a directory of stills
     rgb_file_path: str = os.environ.get("CAPEX_RGB_FILE", "")
@@ -161,13 +164,19 @@ class SourceConfig:
 
     # Mock scene behaviour
     mock_time_scale: float = 12.0        # 1 real second = 12 simulated seconds
-    mock_anomalous_vials: tuple[int, ...] = (7,)
+    mock_anomalous_crucibles: tuple[int, ...] = (7,)
     mock_noise_sigma: float = 3.0
 
     # Real hardware
     picamera2_format: str = "RGB888"     # not XRGB8888: avoids alpha/BGR confusion
     mlx90640_i2c_hz: int = 400_000
     mlx90640_refresh_hz: int = 2
+
+    # PureThermal (FLIR Lepton) over USB/UVC. None auto-discovers the board by
+    # its V4L2 name, which matters because /dev/video0 is usually the laptop's
+    # own webcam - opening it by index silently gives you a picture of yourself
+    # rather than a temperature field.
+    lepton_device: int | None = None
 
 
 SOURCES = SourceConfig()
@@ -179,7 +188,11 @@ SOURCES = SourceConfig()
 @dataclass(frozen=True)
 class CadenceConfig:
     preview_interval_s: float = 0.2      # live camera feed, ~5 fps
-    thermal_interval_s: float = 2.0      # thermal poll
+    # Thermal poll. The Lepton delivers ~8.8 fps and the MLX90640 2 Hz, so
+    # this throttles both: one logged sample and one new dashboard frame every
+    # 3 s. The MJPEG feed re-sends the last frame in between, so the browser
+    # sees a continuous stream rather than a stalling one.
+    thermal_interval_s: float = 3.0
 
     # Analysis cadence. The capture loop always runs at preview rate; a frame
     # is forwarded for analysis only this often, so the pipeline cost is
@@ -241,13 +254,13 @@ QUEUES = QueueConfig()
 class TrackingConfig:
     """Hungarian assignment within zone polygons.
 
-    DeepSORT was evaluated and rejected: its motion model assumes near
+    Motion-model trackers were evaluated and rejected: they assume near
     continuous frames and there is a 30-60 s gap between ours. Gating is
     therefore done in millimetres of platform, not in pixels of predicted
     motion.
     """
 
-    # Maximum plausible displacement between two analysis frames. A vial on
+    # Maximum plausible displacement between two analysis frames. A crucible on
     # the conveyor covers the ~250 mm from lidding to heating in one slow
     # frame, so the gate has to be generous or every handover breaks the ID.
     max_assignment_mm: float = 320.0
@@ -255,12 +268,12 @@ class TrackingConfig:
     max_assignment_busy_mm: float = 90.0
 
     # A track survives this many consecutive analysis frames without a
-    # detection before it is closed. Covers a vial briefly occluded by the
+    # detection before it is closed. Covers a crucible briefly occluded by the
     # lidding head, and the dim ~180 mm the LED panel does not cover.
     max_missed_frames: int = 3
 
-    # Frames a track must be seen in before it is published as a real vial.
-    # Suppresses one-frame localisation noise from creating ghost vials.
+    # Frames a track must be seen in before it is published as a real crucible.
+    # Suppresses one-frame localisation noise from creating ghost crucibles.
     min_hits_to_confirm: int = 2
 
     # Hysteresis: consecutive frames a track must read as a new stage before
@@ -270,13 +283,13 @@ class TrackingConfig:
     # ~90 s after it happens.
     stage_hysteresis_n: int = 2
 
-    # A track last confirmed in "cooling" that then disappears for
-    # max_missed_frames is recorded as having entered the oven rather than
-    # as lost. KNOWN BLIND SPOT: a real failure during cooling looks
+    # A track last confirmed in "collection" (the cooling/end rack) that then
+    # disappears for max_missed_frames is recorded as having entered the oven
+    # rather than as lost. KNOWN BLIND SPOT: a real failure on that rack looks
     # identical to normal oven entry. Not solved, deliberately not papered
     # over - both paths raise the same inference and it is flagged as
     # inferred, never observed.
-    oven_entry_from: str = "cooling"
+    oven_entry_from: str = "collection"
 
 
 TRACKING = TrackingConfig()
@@ -284,7 +297,7 @@ TRACKING = TrackingConfig()
 
 # --------------------------------------------------------------------------
 # Region tracking -- real-hardware crucible zones (storing/injection/heating/
-# collection), independent of the vial-flow TrackingConfig above.
+# collection), independent of the crucible-flow TrackingConfig above.
 # PLACEHOLDER VALUES pending real captured sequences to tune against, same
 # caveat as TRACKING.stage_hysteresis_n.
 # --------------------------------------------------------------------------
@@ -340,8 +353,8 @@ class RegionTrackingConfig:
     # Which zones the heater->cooling lineage watches (pipeline/lineage.py).
     # "collection" is the cooling/end rack on this bench; rename here if the
     # zones are ever re-traced under different names.
-    heater_zone: str = "heating"
-    cooling_zone: str = "collection"
+    heating_zone: str = "heating"
+    collection_zone: str = "collection"
 
     # Only this heater slot is watched by pipeline/handoff.py. Slot 1 is the
     # left pad, the one the arm actually cycles; slot 0 sits untouched for a
@@ -349,7 +362,7 @@ class RegionTrackingConfig:
     handoff_heater_slot: int = 1
 
     # A heater slot that stays occupied but whose detection jumps further
-    # than this is treated as a different vial, not the same one wobbling.
+    # than this is treated as a different crucible, not the same one wobbling.
     # A swap between two captures never shows the slot empty, so occupancy
     # alone cannot see it - but a replaced jar does not land back on the same
     # pixels. Measured on capture/tracking_practice: an untouched jar moved
@@ -357,7 +370,7 @@ class RegionTrackingConfig:
     # the slot being worked moved 4.24-28.79 px, 14+ on four of five steps.
     # 12 px sits above the detector's own noise on a static jar and below a
     # typical replacement. The two ranges do overlap, so a slow careful swap
-    # can still pass as one vial - this narrows the blind spot rather than
+    # can still pass as one crucible - this narrows the blind spot rather than
     # closing it.
     heater_replacement_move_px: float = 12.0
 
@@ -397,7 +410,7 @@ class StorageConfig:
     snapshot_every_n_frames: int = 4
     snapshot_jpeg_quality: int = 85
 
-    # Per-vial crops are what the colour-change comparison needs to diff
+    # Per-crucible crops are what the colour-change comparison needs to diff
     # against. Kept in memory by pipeline.history; written to disk only when
     # an event fires, so a normal run does not fill the SD card.
     save_crop_on_event: bool = True
@@ -422,8 +435,9 @@ class DetectionConfig:
 
     # Which detector modules pipeline.detectors loads. Names match the
     # `name` attribute on each Detector subclass.
-    enabled: tuple[str, ...] = ("turbidity", "solgel", "color_change",
-                                "spill", "vial_presence")
+    enabled: tuple[str, ...] = ("missing_lid", "turbidity",
+                                "sol_gel_transition", "color_change", "spill",
+                                "missing_crucible", "misplaced_labware")
 
     # pipeline.features.lid_score() at or above this reads as a lid.
     # UNLIKE the rest of this dataclass this one IS calibrated: swept against
@@ -440,20 +454,20 @@ class DetectionConfig:
     lid_score_threshold: float = 55.7
 
     # Size of the square crop taken around each tracked centroid, as a
-    # multiple of the vial radius. 2.0 would be exactly the rim; the margin
+    # multiple of the crucible radius. 2.0 would be exactly the rim; the margin
     # keeps the rim and a little bench either side inside the crop.
     roi_scale: float = 2.6
 
-    # How many past analysis frames of per-vial features are retained in
+    # How many past analysis frames of per-crucible features are retained in
     # memory for temporal comparisons.
     history_length: int = 40
 
-    # Crops retained per vial for the previous-image comparison.
+    # Crops retained per crucible for the previous-image comparison.
     crop_history_length: int = 4
 
     # Placeholder scoring knobs, unused until the detectors are written.
     robust_z_threshold: float = 3.5
-    min_vials_for_batch_stats: int = 5
+    min_crucibles_for_batch_stats: int = 5
 
 
 DETECTION = DetectionConfig()

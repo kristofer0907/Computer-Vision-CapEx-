@@ -31,6 +31,6 @@ pytest>=7.0
 # reaches a traceback instead, something imported picamera2 at module scope -
 # that is the bug, not the missing package.
 #
-# Optional, only if the YOLO localisation route is chosen:
-#   pip install ultralytics
+# Localisation is classical CV (OpenCV, above). No learned detector, and no
+# dependency for one - that decision is settled.
 # ---------------------------------------------------------------------------

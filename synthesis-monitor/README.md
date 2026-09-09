@@ -1,7 +1,7 @@
 # CapEx synthesis monitor
 
 Process monitoring for the automated sol-gel perovskite synthesis platform.
-Camera and thermal capture, vial tracking, staging, persistence and a live
+Camera and thermal capture, crucible tracking, staging, persistence and a live
 dashboard — everything around the detection logic.
 
 **Detection is not implemented.** Localisation, feature extraction and all five
@@ -42,7 +42,7 @@ Four files and one directory. Everything else is wired, tested and running.
 Each of those files opens with a docstring describing what the plan for it
 needs and what the context already hands it. Read those before writing code —
 several of the traps are mechanical (illumination gradients, crop size
-mismatches, batch-wide changes reading as per-vial anomalies) rather than
+mismatches, batch-wide changes reading as per-crucible anomalies) rather than
 chemical, and they are documented where they bite.
 
 Nothing else needs to change to add a feature or a detector. Features are
@@ -60,7 +60,7 @@ frame, deliberately — it is a test oracle, not an algorithm.
 main.py                 entry point: start workers, serve dashboard
 config.py               all configuration; DETECTION values are uncalibrated
 drivers/                camera and thermal backends behind CameraSource/ThermalSource
-  scene.py              synthetic 18-vial platform, with ground truth
+  scene.py              synthetic 18-crucible platform, with ground truth
 runtime/                the four processes and the queues between them
   capture.py            owns the camera -> preview JPEG + raw analysis frames
   processing.py         owns the pipeline and its SQLite writes
@@ -71,14 +71,14 @@ pipeline/
   tracking.py           Hungarian assignment, gated in millimetres
   assignment.py         the solver itself, no scipy dependency
   zones.py              polygons, px/mm conversion, stage hysteresis
-  roi.py                per-vial and per-zone crops and masks
-  history.py            per-vial feature and crop memory across frames
+  roi.py                per-crucible and per-zone crops and masks
+  history.py            per-crucible feature and crop memory across frames
   stats.py              median / MAD helpers; optional, delete if unwanted
 storage/                SQLite for numbers, files on disk for images
 dashboard/              Flask; reads only, owns no device
 tools/
   edit_zones.py         drag the zone polygons onto a real capture
-  mark_vials.py         click the vials in your captures -> data/vials.json
+  mark_vials.py         click the crucibles in your captures -> data/vials.json
   inspect_roi.py        render crops, masks and zones for visual checking
   replay.py             run the pipeline over a recording or the simulator
 ```
@@ -91,11 +91,11 @@ Put your captures anywhere — a folder of stills, or a video. Three steps, once
 # 1. drag the zone polygons onto a real frame
 python -m tools.edit_zones --image captures/capture_00.jpg
 
-# 2. click the vials, so something can find them before a localiser exists
+# 2. click the crucibles, so something can find them before a localiser exists
 python -m tools.mark_vials --images captures/
 
 # 3. look at what the pipeline actually sees
-python -m tools.inspect_roi --images captures/ --all-vials --show
+python -m tools.inspect_roi --images captures/ --all-crucibles --show
 ```
 
 After that your images run through the whole pipeline:
@@ -106,7 +106,7 @@ python main.py --rgb file --file captures/          # with the dashboard
 ```
 
 `tools/inspect_roi.py` is the visual loop while tuning ROIs: `--scale` sets
-the crop size as a multiple of vial radius, `--all-vials` shows all 18 crops
+the crop size as a multiple of crucible radius, `--all-crucibles` shows all 18 crops
 with the disc boundary drawn over them, `--show` opens a window (falls back to
 writing files when there is no display).
 
@@ -122,7 +122,7 @@ marks as the reference.
    look like it works, which is what makes it worth doing early. No display on
    the Pi: use `--save-frame`, copy the image over, and trace it with
    `--image`.
-2. **Resolve vial localisation** — classical CV or a fine-tuned YOLO. This is
+2. **Tune crucible localisation** — classical Hough circles. This is
    the biggest open architecture decision and it blocks all real detection
    work. It does not block the hardware bring-up, and it does not block
    writing the tracker tests, which already exist.
@@ -131,11 +131,14 @@ marks as the reference.
 
 ## Things that are settled
 
-- **Tracker: Hungarian assignment within zone polygons.** DeepSORT was
-  evaluated and rejected — its motion model assumes near-continuous frames and
-  there are 30–60 seconds between ours. Not open for revisiting.
+- **Tracker: global assignment within zone polygons**, gated in millimetres
+  of platform. Appearance-plus-Kalman trackers were evaluated and rejected —
+  their motion models assume near-continuous frames and there are 30–60
+  seconds between ours. Not open for revisiting.
+- **Localisation: classical CV.** Hough circles, `CrucibleLocalizer`. No
+  learned detector and no dependency for one.
 - **Thermal is a passive log.** No model, no algorithm, no part of the anomaly
-  logic. At 2.4 cm/px a vial spans one or two pixels; there is nothing there to
+  logic. At 2.4 cm/px a crucible spans one or two pixels; there is nothing there to
   run anything on. `DetectionContext` deliberately has no thermal field.
 - **`Flask(debug=True)` must stay off.** The reloader forks a second
   interpreter, which would start a second set of worker processes and open the
@@ -146,7 +149,7 @@ marks as the reference.
 
 ## Known blind spot
 
-A vial that disappears after cooling is inferred to have entered the oven,
+A crucible that disappears after cooling is inferred to have entered the oven,
 which is outside the camera's view. A genuine failure during cooling — knocked
 over, removed by hand — produces exactly the same observation. The tracker
 records the inference as an inference (`oven_entry_inferred`, severity info)

@@ -10,8 +10,8 @@ turbidity, liquid→solid (sol-to-gel) transitions, misplaced/missing labware.
 That's deferred to a later phase. Do not conflate the two.
 
 **Detection philosophy:** qualitative, gross-state detection — not fine
-colorimetry. The 18 vials run the same protocol in parallel, so the batch is
-its own ground truth: a vial statistically diverging from its peers (batch-
+colorimetry. The 18 crucibles run the same protocol in parallel, so the batch is
+its own ground truth: a crucible statistically diverging from its peers (batch-
 median scoring) is anomalous, with no labeled training data required.
 
 ## Physical setup
@@ -21,8 +21,8 @@ median scoring) is anomalous, with no labeled training data required.
 - Windowed box, ambient office lighting present (not a dark/enclosed box)
 - Two levels of metal support bars: LED panel hangs from upper bars, camera
   bridge mounts to lower bars
-- Vial flow: filling (all 18 together) → conveyor → lidding → heating pad
-  (max 2 vials at a time) → cooling pad → oven (enclosed, **outside camera
+- Crucible flow: filling (all 18 together) → conveyor → lidding → heating pad
+  (max 2 crucibles at a time) → cooling pad → oven (enclosed, **outside camera
   view** — oven entry is inferred, not observed)
 
 ## Hardware (finalized)
@@ -40,7 +40,7 @@ median scoring) is anomalous, with no labeled training data required.
   - CRI 80 vs 90+ is an open question pending researcher input — depends on
     whether subtle color changes matter for this specific perovskite chemistry
 - Cross-polarization: polarizing film (K&F/Nitto) on both panel (source side)
-  and lens (imaging side) to kill specular glare on glass vials, tuned by
+  and lens (imaging side) to kill specular glare on glass crucibles, tuned by
   rotating one film until glare disappears. Must be **linear, not circular
   (CPL)**. Lens-side film quality matters more (its defects degrade the image
   directly; source-side defects don't project into frame). Film must mount on
@@ -54,12 +54,24 @@ median scoring) is anomalous, with no labeled training data required.
   - Bring-up complete: wiring, I2C, bus scan, library, live Flask MJPEG
     stream all working (`cv2.COLORMAP_INFERNO` + `INTER_NEAREST` upscale)
   - Resolution confirmed insufficient at 80–85cm mounting height: 32×24px
-    over 110° FOV at 80cm ≈ 2.4cm/pixel → a vial spans only ~1–2 pixels
-  - **Decision path**: try the free option first — remount the MLX90640
-    lower, dedicated to just the heater-pad zone (max 2 vials) instead of
-    sharing the RGB camera's full-platform height. At h=15cm this gets to
-    ~1.3cm/pixel, no hardware cost. Only escalate to the Lepton upgrade if
-    that's still insufficient.
+    over 110° FOV at 80cm ≈ 2.4cm/pixel → a crucible spans only ~1–2 pixels
+  - **Superseded — the Lepton is here.** A PureThermal 3 + Lepton 3.x arrived
+    and is working (`drivers/thermal_cam.py:LeptonSource`, `--thermal lepton`).
+    160×120 over USB/UVC, ~8.8 fps, TLinear radiometric. The MLX90640 backend
+    is kept; `--thermal auto` tries the Lepton first and falls back.
+  - Lepton resolution on the platform (27mm crucible): at h=80cm a 95° part
+    gives 1.09 cm/px = 2.5 px per crucible, a 57° part 0.54 cm/px = 5.0 px.
+    Mounted low over the heater pad at h=15cm those become 0.20 and 0.10
+    cm/px (13 and 27 px). **Which FOV is fitted is not yet confirmed** —
+    that decides whether it can stay on the camera bridge or wants its own
+    low mount.
+  - **Warm-up is real and it lies quietly.** From cold the Lepton reads ~13°C
+    low and drifts down ~2°C/min for the first few minutes (a −14°C indoor
+    minimum), then settles to a correct room reading (16°C median across a
+    13–23°C room, ±0.5°C as the FFC shutter cycles). `LeptonSource.start()`
+    logs the scene median and warns if it is outside an indoor range.
+    Absolute accuracy against a reference is still unverified (part spec
+    ≈ ±5°C); ice water + a hand is the two-minute check.
   - Lepton part decision finalized (if needed): 500-0758-03 (Lepton 3.1R:
     160×120, 95° FOV, radiometric, ~$66–142, short lead time) over
     500-0771-01 (Lepton 3.5: same resolution, narrower 57° FOV — geometrically
@@ -71,30 +83,32 @@ median scoring) is anomalous, with no labeled training data required.
   repurposed later as a side-view fill-level camera (not currently in scope)
 
 ## Software architecture
-Decoupled Python multiprocessing, communicating via `multiprocessing.Queue`:
+**Single process, one vision thread** (`main.py:Monitor`). At a 15–60s cadence
+a frame costs far less than the interval, so there is nothing to parallelise;
+the multiprocessing scaffolding that predated this is flagged for removal in
+`REORG_REVIEW.md`. Revisit only if profiling shows frame processing exceeding
+~3s under the fast cadence.
 
-1. **Capture loop** — camera + thermal acquisition
-2. **Processing pipeline** — vial localization → Hungarian-assignment
-   tracking within zone polygons → per-vial feature extraction (mean HSV,
-   texture variance, brightness, frame differencing) → batch-median anomaly
-   scoring → zone-polygon stage classification
-3. **Thermal logger** — independent, writes to SQLite
-4. **Flask dashboard**
+1. **Capture** — `camera.capture()`, blocking
+2. **Locate** — `CrucibleLocalizer` (classical Hough circles)
+3. **Track** — `SlotTracker` on fixed-slot zones, `FifoTracker` on the lane
+4. **Lineage** — `pipeline/lineage.py`, heater→cooling identity, independent
+   of both the tracker and the detectors
+5. **Check** — each detector's `check() -> list[AnomalyResult]`
+6. **Persist** — tripped results only, to `anomaly_events` via `storage/db.py`
+7. **Publish** — frame + overlay to the Flask MJPEG stream
 
-Cadence: every 30–60s normally, ~10s during conveyor operation.
+The thermal logger keeps its own thread and its own SQLite writes; nothing in
+the vision path reads it.
 
-- **Tracker: confirmed.** DeepSORT was evaluated and rejected — its motion
-  model assumes near-continuous frames, not 30–60s gaps. Hungarian assignment
-  within known zone polygons is the actual approach, tracker implementation
-  kept behind a swappable interface. Not open for debate; don't reintroduce
-  DeepSORT.
-- **⚠️ OPEN — vial localization method still unresolved**: classical CV
-  (contour/Hough-circle) vs. fine-tuned YOLO. Per the most recent working
-  session this is still called "the biggest unresolved architecture
-  decision, unchanged from earlier sessions" — despite earlier notes
-  elsewhere referring to YOLOv8n pretrained as if it were settled. Treat
-  YOLOv8n as *a candidate*, not a locked-in decision, until this is actually
-  resolved.
+- **Tracker: settled.** Global assignment on ground distance in millimetres,
+  gated per zone, with the stage machine inside zone polygons. Appearance-plus-
+  Kalman trackers were evaluated and rejected — their motion models assume
+  near-continuous frames, not 30–60s gaps. Not open for debate.
+- **Crucible localization: settled — classical CV.** Hough circles on a
+  flat-field-corrected frame (`CrucibleLocalizer`, what `"auto"` resolves to).
+  Learned detectors are out: no labelled data, and near-identical discs on a
+  flat bench are the case classical CV handles well.
 - Camera/Thermal source interface formalized (not yet implemented):
   `CameraSource`/`ThermalSource` ABCs with `start()` / `capture()` / `stop()`,
   returning `Frame`/`ThermalFrame` dataclasses (image or thermal array +
@@ -111,15 +125,15 @@ Cadence: every 30–60s normally, ~10s during conveyor operation.
      (clean swap-in test against the mocks).
   2. Validate real capture latency doesn't break queue assumptions built
      against instant mocks.
-  3. Resolve vial localization approach (see open item above) — this blocks
+  3. Resolve crucible localization approach (see open item above) — this blocks
      real detection work, independent of hardware readiness.
   4. Hungarian tracker assignment logic can be unit-tested against synthetic
      centroid data independent of camera readiness — doesn't need to wait on
      1–3.
 - Explicitly flagged: HSV/texture thresholds and anomaly-scoring calibration
-  **cannot be meaningfully pre-tuned without real captured vial images** —
+  **cannot be meaningfully pre-tuned without real captured crucible images** —
   don't guess these values ahead of real data.
-- **Oven inference rule**: a vial disappearing after its last confirmed
+- **Oven inference rule**: a crucible disappearing after its last confirmed
   cooling-stage detection is inferred to have entered the oven; tracking
   stops. Requires an N-consecutive-frame hysteresis threshold before
   committing a stage transition. **Known gap**: a real failure during
@@ -149,7 +163,7 @@ Cadence: every 30–60s normally, ~10s during conveyor operation.
   - **New open item**: because vertical FOV (75cm) so drastically overshoots
     the 26cm platform width, effective vertical pixel density on the
     platform is only ~1/3 of the sensor's nominal resolution. Decide whether
-    to crop in software or accept the loss — relevant if per-vial pixel
+    to crop in software or accept the loss — relevant if per-crucible pixel
     density becomes limiting during feature-extraction tuning.
 - **New unresolved error**: `ModuleNotFoundError: No module named
   'libcamera'` when running `main.py` — traced to running from what looks
@@ -204,11 +218,13 @@ Cadence: every 30–60s normally, ~10s during conveyor operation.
   (Determines CRI 80 vs 90+ requirement.)
 - Which process stage sits in the dim ~20cm zone the LED panel doesn't cover?
 - Expected per-stage timings (needed to set temporal anomaly thresholds)
-- Zone polygon coordinates — not yet defined
+- Zone polygon coordinates — the `ZONES` polygons in `config.py` are still
+  the old whole-platform placeholders (`filling/conveyor/lidding/heating/
+  cooling`) while the real bench runs `storing/injection/heating/collection`.
+  Re-trace with `tools/edit_zones.py`. This mismatch is why one test in
+  `tests/test_edit_zones.py` fails.
 - Hysteresis N (frames before a stage transition is committed) — not yet
   chosen
-- Vial localization method: classical CV (contour/Hough-circle) vs.
-  fine-tuned YOLO — unresolved, see Software architecture section
 - Vertical pixel density loss on IMX477 (~2/3 wasted on background) — crop
   in software or accept it?
 - Which machine `main.py` is actually meant to run on (Pi vs. WSL/laptop dev
