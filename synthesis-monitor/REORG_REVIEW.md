@@ -29,6 +29,10 @@ It is **not** in the MVP `anomaly/` list you gave me.
 Note `anomaly.py:257`: `on_stop` stops *this pipeline*. There is no control channel to
 the synthesis platform. It is not a safety interlock.
 
+
+# ANSWER: Lid detection should be in the anamoly 
+
+
 ---
 
 ## 2. Multiprocessing scaffolding — replaced by the single-process loop
@@ -47,6 +51,9 @@ the synthesis platform. It is not a safety interlock.
 **`runtime/bus.py` (143) is NOT in this list — keep it.** It is `threading.Lock` only, no
 `multiprocessing`. The capture loop and the dashboard both use `LatestSlot`, and
 `test_runtime.py` covers it.
+
+# ANSWER: That's fine
+
 
 ---
 
@@ -70,6 +77,9 @@ editing a tool.
 `CadenceController` lives in it and drives the 15–60 s cadence. Splitting the file is a
 later cleanup, not this pass.
 
+# ANSWER: Remove any thing involving HungarianTracker
+
+
 ---
 
 ## 4. Scratch / duplicate — flagged only, no action taken
@@ -84,7 +94,12 @@ Your do-not-touch set covers `tools/` and `capture/`, so these are listed, not t
   third-party files in git. They are why a repo-wide grep returns noise. Recommend
   `.gitignore` + `git rm -r --cached`. Not done.
 
+
+# ANSWER: That's fine
+
+
 ---
+
 
 ## 5. Dashboard routes beyond MJPEG
 
@@ -95,6 +110,8 @@ Your spec says "Flask MJPEG stream only". The non-MJPEG routes are kept because
 `/healthz`, `/snapshot/<path>`.
 
 - [ ] Trim to the three `/feed/*` MJPEG routes (costs ~8 tests in `test_runtime.py`)
+
+# ANSWER: That's fine
 
 ---
 
@@ -113,6 +130,9 @@ This mismatch is the cause of the pre-existing `test_edit_zones.py` failure.
 - [ ] Re-trace zone polygons under the real stage names (an operator task with
       `tools/edit_zones.py` on a real frame, not a code change)
 
+# ANSWER: Make sure there is only one naming convention, and it should be storing / injection / heating / collection
+
+
 ---
 
 ## 7. Learned-detector and motion-model tracker references — nothing existed to delete
@@ -124,6 +144,7 @@ banned terms do not: `pipeline/tracking.py`, `pipeline/region_trackers.py`,
 `requirements.txt`, `README.md`, `CLAUDE.md`.
 
 Both decisions are stated as settled in `CLAUDE.md` under Software architecture.
+# ANSWER: That's fine
 
 ---
 
@@ -142,3 +163,4 @@ A repo-wide zero-hit grep is not reachable while `lineage.py`, `tools/`, `data/`
 
 - [ ] Rename `VialLineage` → `CrucibleLineage` anyway (pure rename, touches
       `pipeline/lineage.py` + 55 refs in `tests/test_lineage.py`)
+# ANSWER: That's fine, just don't break anything. 
