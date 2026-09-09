@@ -508,6 +508,15 @@ class DetectionConfig:
     # one lidded crucible at 578 against its identical neighbours at 799-955.
     lid_score_threshold: float = 55.7
 
+    # pipeline.features.rim_circularity() below this reads as tipped over.
+    # Sits mid-gap on capture/fail_safe: tipped crucibles top out at 0.84,
+    # upright ones bottom out at 0.97. That gap comes from three tipped and
+    # three upright crucibles in one scene under one lighting setup, so treat
+    # it as the number that makes the check runnable, not as a calibration -
+    # rerun tools/review_fallen.py once there are real tip-overs on the
+    # bench.
+    fallen_circularity_threshold: float = 0.90
+
     # Size of the square crop taken around each tracked centroid, as a
     # multiple of the crucible radius. 2.0 would be exactly the rim; the margin
     # keeps the rim and a little bench either side inside the crop.

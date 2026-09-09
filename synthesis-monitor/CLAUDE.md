@@ -223,6 +223,26 @@ the vision path reads it.
   cooling`) while the real bench runs `storing/injection/heating/collection`.
   Re-trace with `tools/edit_zones.py`. This mismatch is why one test in
   `tests/test_edit_zones.py` fails.
+- **Off-plate tip-over — acknowledged blind spot, decision made to accept it.**
+  `check_fallen_crucible` is slot-anchored: it scores the positions a
+  crucible is *expected* at and asks whether what is there is upright.
+  `capture/fail_safe` holds five tipped crucibles — three on the plate, which
+  it catches, and two lying on the pegboard between the injector and the
+  plate, which it never looks at. `rim_circularity` scores those two 0.58 and
+  0.80, so the measure is right; there is no anchor pointing at them.
+  Nothing cheap closes this, and all of it was measured, not assumed:
+  - a blind sweep of the score over the transit strip flags 105 of 105
+    bench-clutter points — it is a verifier, not a detector, and nothing on a
+    pegboard is a circle either
+  - contour candidate-finding locks onto the plate slots instead
+  - per-window appearance (brightness, texture energy, std, dark-fraction)
+    puts both tipped crucibles inside the background distribution
+  - frame differencing finds the one that *arrived* mid-sequence, but not the
+    one already down in frame 0 — it is static, so there is nothing to diff
+  The two ways out are hand-marked anchors along the transit path
+  (`tools/mark_slots.py`, stays cache-free) or a stored empty-bench reference
+  image (finds anything, but it is a cache and dies on any camera or lighting
+  shift). Deferred until the transit zone is defined.
 - Hysteresis N (frames before a stage transition is committed) — not yet
   chosen
 - Vertical pixel density loss on IMX477 (~2/3 wasted on background) — crop
