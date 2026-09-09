@@ -303,7 +303,15 @@ class SyntheticPlatform:
 
     # -------------------------------------------------------------- thermal
     def thermal(self, t: float) -> np.ndarray:
-        """24x32 degC field: ambient, heater pad hot spot, warm cooling zone."""
+        """24x32 degC field: ambient, heater pad hot spot, warm end rack.
+
+        Zone names are looked up defensively, like everywhere else in this
+        class: a traced calibration names its zones for the real bench and
+        need not contain any particular one. An unguarded lookup here used to
+        raise KeyError on every read once real zones were traced, which
+        stopped the thermal feed dead with nothing on screen but the
+        placeholder.
+        """
         rows, cols = 24, 32
         field = np.full((rows, cols), 22.0, np.float32)
         yy, xx = np.mgrid[0:rows, 0:cols].astype(np.float32)
@@ -312,10 +320,15 @@ class SyntheticPlatform:
             cx, cy = nx * cols, ny * rows
             field[:] += amp * np.exp(-(((xx - cx) ** 2 + (yy - cy) ** 2) / (2 * sigma**2)))
 
-        hx, hy = self._zone_centers["heating"]
-        blob(hx, hy, 62.0, 2.6)                       # heater pad
-        cx_, cy_ = self._zone_centers["cooling"]
-        blob(cx_, cy_, 14.0, 3.0)                     # residual heat on cooling pad
+        def blob_at(names: tuple[str, ...], amp: float, sigma: float) -> None:
+            for name in names:
+                if name in self._zone_centers:
+                    nx, ny = self._zone_centers[name]
+                    blob(nx, ny, amp, sigma)
+                    return
+
+        blob_at(("heating",), 62.0, 2.6)              # heater pad
+        blob_at(("collection", "cooling"), 14.0, 3.0)  # residual heat, end rack
 
         for st in self.states_at(t):
             if st.stage == "heating":

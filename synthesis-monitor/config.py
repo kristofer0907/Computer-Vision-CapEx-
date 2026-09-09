@@ -188,7 +188,11 @@ SOURCES = SourceConfig()
 @dataclass(frozen=True)
 class CadenceConfig:
     preview_interval_s: float = 0.2      # live camera feed, ~5 fps
-    thermal_interval_s: float = 2.0      # thermal poll
+    # Thermal poll. The Lepton delivers ~8.8 fps and the MLX90640 2 Hz, so
+    # this throttles both: one logged sample and one new dashboard frame every
+    # 3 s. The MJPEG feed re-sends the last frame in between, so the browser
+    # sees a continuous stream rather than a stalling one.
+    thermal_interval_s: float = 3.0
 
     # Analysis cadence. The capture loop always runs at preview rate; a frame
     # is forwarded for analysis only this often, so the pipeline cost is

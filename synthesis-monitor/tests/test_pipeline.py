@@ -154,6 +154,25 @@ def test_scene_renders_against_arbitrary_zone_sets(monkeypatch, polygons):
     image = platform.render(120.0)
     assert image.shape[2] == 3
     assert platform.truth_at(120.0)["crucibles"], "crucibles must still be placed"
+    # thermal() used to index zone names directly. Once real zones were traced
+    # it raised KeyError on every read and the thermal feed showed nothing but
+    # its placeholder, with the failure only visible as a log warning.
+    assert platform.thermal(120.0).shape == (24, 32)
+
+
+def test_scene_thermal_survives_the_real_traced_zone_names(monkeypatch):
+    """The exact case that broke it: the bench's own zone names, no 'cooling'."""
+    from config import ZoneConfig
+    import drivers.scene as scene
+
+    traced = {name: [(x0, 0.3), (x0 + 0.2, 0.3), (x0 + 0.2, 0.7), (x0, 0.7)]
+              for name, x0 in (("storing", 0.02), ("injection", 0.26),
+                               ("heating", 0.50), ("collection", 0.74))}
+    monkeypatch.setattr(scene, "ZONES", ZoneConfig(polygons=traced))
+    platform = scene.SyntheticPlatform()
+    field = platform.thermal(120.0)
+    assert field.shape == (24, 32)
+    assert field.max() > field.mean(), "the heater pad must still be the hot spot"
 
 
 # --------------------------------------------------------------------------

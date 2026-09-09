@@ -161,13 +161,22 @@ class LeptonSource(ThermalSource):
     the part is specified at about +-5 C. Ice water at 0 C and a hand at ~33 C
     is a two-minute check if the numbers ever need to be trusted rather than
     compared.
+
+    The board can also wedge: it stays enumerated on USB and opens fine, but
+    every read times out ("select() timeout", then "opened but read() failed").
+    Seen here after repeatedly opening and closing it in quick succession.
+    Unplugging and replugging clears it; nothing in software does.
     """
 
     name = "lepton"
     simulated = False
 
+    # Two, not five. A wedged board does not fail fast: OpenCV's V4L2 read
+    # sits on a ~10 s select() timeout before returning false, so each retry
+    # costs ten seconds. Five would block the thermal thread for the best part
+    # of a minute per cycle and bury a dead sensor under a stalled feed.
     def __init__(self, device: int | None = None,
-                 max_read_retries: int = 5) -> None:
+                 max_read_retries: int = 2) -> None:
         super().__init__()
         self.device = SOURCES.lepton_device if device is None else device
         self.max_read_retries = max_read_retries
