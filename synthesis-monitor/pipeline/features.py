@@ -42,6 +42,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
+from config import GEOMETRY
 from pipeline.types import Track
 
 log = logging.getLogger(__name__)
@@ -217,6 +218,123 @@ LID_WINDOW_PX = 20.0
 # Tuned on data/lid_review.json (225 labels): 2 misses, both open->lid.
 # Fix with a better feature, not by nudging this number.
 LID_SCORE_THRESHOLD = 55.7
+
+
+# --------------------------------------------------------------------------
+# Tip-over
+# --------------------------------------------------------------------------
+# Angular samples around the crucible, and the radial band searched for its
+# rim, as a multiple of the crucible radius. The band starts below 1.0 and
+# ends well above it because Hough's radius wanders and because the rim of a
+# crucible sitting in a plate slot is only a little wider than the slot.
+RIM_ANGLES = 120
+RIM_BAND = (0.85, 1.60)
+# Sobel magnitude at or above this counts as rim. Swept over the fail-safe
+# set: 60 is the middle of the plateau. At 40 every class saturates at 1.0,
+# at 100 real upright rims start dropping out.
+RIM_EDGE_THRESHOLD = 60.0
+# The centre is re-tried over a +-32 px grid at 4 px steps and the best score
+# kept. The reason is parallax, not sloppiness: the rim sits ~40 mm above the
+# plate, so away from the optical axis it projects outward from the slot it
+# stands in - 28 px at the far corner of the fail-safe plate. Without the
+# search an upright crucible scored from its slot centre reads 0.62-0.77,
+# indistinguishable from a tipped one; with it, 0.97-1.00 against 0.73-0.88.
+RIM_SEARCH_PX = 32.0
+RIM_SEARCH_STEP_PX = 4
+
+
+def rim_circularity(img: np.ndarray, cx: float, cy: float,
+                    r: float | None = None,
+                    search_px: float = RIM_SEARCH_PX,
+                    edge_threshold: float = RIM_EDGE_THRESHOLD,
+                    _mag: np.ndarray | None = None) -> float:
+    """How much of a full circle the crucible's rim traces, 0..1.
+
+    An upright crucible is a cylinder seen down its axis: its rim closes a
+    complete circle about the centre. A crucible lying on its side presents
+    the cylinder wall instead - long arcs down one side, and a rim ellipse
+    displaced by roughly the crucible's height - so no radius about the
+    reported centre has edge support all the way round.
+
+    So: sample the Sobel magnitude on a polar grid about (cx, cy), and for
+    each candidate radius count the fraction of the 120 angles carrying an
+    edge within +-2 px of it. The score is the best radius' fraction. 1.0 is
+    an unbroken ring; a tipped crucible leaves a gap wherever its own body,
+    not its rim, sits under the sampling circle.
+
+    `r` defaults to the nominal crucible radius from GEOMETRY. The band is
+    wide enough that the exact value does not matter - scoring the fail-safe
+    set with each detection's own Hough radius and with the single nominal
+    radius gives identical numbers to three decimals.
+
+    `_mag` lets a caller scoring many crucibles in one frame compute the
+    Sobel magnitude once and pass it in; it is otherwise computed here.
+
+    Measured on capture/fail_safe (7 frames, tools/review_fallen.py),
+    scored at each crucible's slot centre: upright 0.97-1.00, tipped
+    0.76-0.84. An empty slot also scores 0.97-1.00 - the slot's own rim is a
+    perfect circle - so this measure says "upright or nothing", never
+    "occupied". Occupancy is the tracker's to know.
+
+    That is three tipped crucibles and three upright ones seen seven times
+    each, not 105 independent samples. The gap is wide and stable across
+    every frame; it is still six objects in one scene.
+
+    This is a verifier, not a detector. It answers "is the crucible that
+    should be here upright", and it must be told where to look: swept blind
+    over the bench, 105 of 105 clutter points score below the threshold,
+    because nothing on a pegboard is a circle either. Two more tipped
+    crucibles sit off the plate in the same frames and are missed for exactly
+    that reason - not because they score high (0.58 and 0.80) but because
+    nothing anchors the measure on them.
+    """
+    r = GEOMETRY.crucible_radius_px if r is None else r
+    mag = rim_gradient(img) if _mag is None else _mag
+    lo, hi = RIM_BAND
+    radii = np.arange(int(r * lo), int(r * hi) + 1, dtype=np.float32)
+    if radii.size == 0:
+        return 0.0
+    ang = np.arange(RIM_ANGLES, dtype=np.float32) / RIM_ANGLES * 2 * np.pi
+    cos_r = np.outer(np.cos(ang), radii)
+    sin_r = np.outer(np.sin(ang), radii)
+
+    step = RIM_SEARCH_STEP_PX
+    offsets = range(-int(search_px), int(search_px) + 1, step) or (0,)
+    best = 0.0
+    for dy in offsets:
+        for dx in offsets:
+            xs = (cx + dx + cos_r).astype(np.float32)
+            ys = (cy + dy + sin_r).astype(np.float32)
+            polar = cv2.remap(mag, xs, ys, cv2.INTER_LINEAR,
+                              borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+            hit = polar > edge_threshold
+            # +-2 px of radial slack, so a rim slightly out of round still
+            # closes rather than being punished once per angle for one offset.
+            slack = hit.copy()
+            for shift in (-2, -1, 1, 2):
+                slack |= np.roll(hit, shift, axis=1)
+            best = max(best, float(slack.mean(axis=0).max()))
+    return best
+
+
+def rim_gradient(img: np.ndarray) -> np.ndarray:
+    """Sobel magnitude of one frame - what rim_circularity samples.
+
+    Exposed so a caller scoring a whole frame's worth of crucibles computes
+    it once instead of once per crucible; on a 4056x3040 frame it costs far
+    more than the polar sampling does.
+    """
+    gray = img if img.ndim == 2 else cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 1).astype(np.float32)
+    gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
+    return np.hypot(gx, gy)
+
+
+# Mid-gap between the two classes on capture/fail_safe: upright bottoms out
+# at 0.97, tipped tops out at 0.84. Six objects, one scene, one lighting - a
+# working threshold, not a calibrated one.
+RIM_CIRCULARITY_THRESHOLD = 0.90
 
 
 def has_lid(img: np.ndarray, cx: float, cy: float, r: float,

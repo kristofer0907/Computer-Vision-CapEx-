@@ -23,7 +23,7 @@ across checks - a lid gradient of 55 and a turbidity z of 3.5 mean nothing to
 each other. `subjects` carries the same number per crucible, so an overlay or
 a log can point at the one that failed rather than at the frame.
 
-Four of the five checks are not written yet. They return
+Three of the five checks are not written yet. They return
 `implemented=False, failed=False` so the whole set can be wired into the
 runner now and read honestly on a dashboard: registered, looking at nothing.
 
@@ -42,7 +42,7 @@ from typing import Callable
 import numpy as np
 
 from config import DETECTION, REGION_TRACKING
-from pipeline.features import lid_score
+from pipeline.features import lid_score, rim_circularity, rim_gradient
 from pipeline.types import Event
 
 log = logging.getLogger(__name__)
@@ -107,9 +107,9 @@ def check_missing_lid(cycle: Cycle,
                       threshold: float | None = None) -> CheckResult:
     """Any crucible in `positions` without a lid.
 
-    The only implemented check. `lid_score` is a mean gradient magnitude in a
-    fixed window on the crucible centre - a lid breaks up the smooth interior
-    whether it reads bright or dark. Low score means open.
+    `lid_score` is a mean gradient magnitude in a fixed window on the
+    crucible centre - a lid breaks up the smooth interior whether it reads
+    bright or dark. Low score means open.
 
     Stateless: it answers for this frame only. The latch, and the decision to
     stop the run, live in `MissingLid` below.
@@ -135,16 +135,56 @@ def check_missing_lid(cycle: Cycle,
     )
 
 
-def check_fallen_crucible(cycle: Cycle) -> CheckResult:
-    """A crucible that has tipped over.
+def check_fallen_crucible(cycle: Cycle,
+                          threshold: float | None = None) -> CheckResult:
+    """Any crucible in `positions` lying on its side rather than standing.
 
-    Wants a per-crucible shape measure - ellipse eccentricity, rim
-    circularity, or a centroid that jumped and then stopped moving - scored
-    against the batch, since 18 upright peers are the reference. Needs
-    pictures of a real tip-over before either the measure or the threshold
-    can be chosen.
+    `rim_circularity` is the measure: an upright crucible closes a full
+    circle of rim about its own centre, a tipped one does not, because what
+    is under the sampling circle is the cylinder wall. Low score means
+    tipped. Stateless, single frame, no batch reference needed - the score
+    is absolute in a way the colour and turbidity features are not, because
+    it is measuring a shape and not an appearance.
+
+    Two limits worth knowing before trusting an all-clear:
+
+    - It only ever sees the positions it is handed, and those must be where
+      a crucible is *expected* - a slot centre - not where one was detected.
+      detect_crucibles() finds none of the tipped crucibles in
+      capture/fail_safe: a crucible on its side stops being a circle.
+
+    - It is blind off the plate, and that is a real gap, not a rounding
+      error. capture/fail_safe holds five tipped crucibles, not the three on
+      the plate: two more lie on the pegboard between the injector and the
+      plate. rim_circularity scores them 0.58 and 0.80, well under the
+      threshold - the measure is right, there is simply no anchor pointing at
+      them. See "off-plate tip-over" in CLAUDE.md for why nothing cheap
+      fixes that.
+    - The threshold is a mid-gap guess over four objects in one scene. See
+      DETECTION.fallen_circularity_threshold.
     """
-    return _todo("fallen_crucible", "no tip-over measure chosen yet")
+    limit = (DETECTION.fallen_circularity_threshold if threshold is None
+             else threshold)
+    # One Sobel pass for the whole frame rather than one per crucible.
+    mag = rim_gradient(cycle.image) if cycle.positions else None
+    scores = {cid: rim_circularity(cycle.image, cx, cy, _mag=mag)
+              for cid, (cx, cy) in cycle.positions.items()}
+    tipped = sorted(cid for cid, s in scores.items() if s < limit)
+    if tipped:
+        ids = ", ".join(str(c) for c in tipped)
+        message = f"crucible(s) {ids} have tipped over (below {limit:.2f})"
+    elif scores:
+        message = f"all {len(scores)} crucible(s) upright"
+    else:
+        message = "no crucibles to check"
+    return CheckResult(
+        name="fallen_crucible",
+        failed=bool(tipped),
+        score=min(scores.values()) if scores else None,
+        message=message,
+        subjects={cid: round(s, 3) for cid, s in scores.items()},
+        offenders=tipped,
+    )
 
 
 def check_turbidity(cycle: Cycle) -> CheckResult:
