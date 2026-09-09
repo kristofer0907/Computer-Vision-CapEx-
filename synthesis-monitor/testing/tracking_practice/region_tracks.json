@@ -1,0 +1,52 @@
+[
+  {
+    "frame": "20260908_160649_0000.jpg",
+    "zones": {
+      "heating": [
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 0,
+          "cx": 2017.5,
+          "cy": 2503.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 19.2
+        }
+      ],
+      "collection": []
+    },
+    "lineage": {
+      "on_heater": {
+        "0": "heater-0-1788889372410"
+      },
+      "on_cooling": {},
+      "pending_vacates": [],
+      "records": [],
+      "warnings": []
+    },
+    "handoffs": [],
+    "closed": [],
+    "handoff": {
+      "held_id": null,
+      "storage_ids": {},
+      "records": [],
+      "warnings": []
+    },
+    "alerts": [
+      {
+        "frame": 0,
+        "kind": "missing_lid",
+        "severity": "alert",
+        "message": "crucible placed on heater slot 0 without a lid (score 19.2, below 55.7) - stopping",
+        "heater_slot": 0,
+        "lid_score": 19.2,
+        "threshold": 55.7,
+        "cx": 2017.5,
+        "cy": 2503.5,
+        "stop_requested": true
+      }
+    ]
+  }
+]

@@ -1,35 +1,42 @@
-"""Shared anomaly scoring.  ***YOURS, IF YOU WANT IT.***
+"""Fail-safe checks, run once per cycle.
 
-Left empty on purpose. All five detectors are planned around batch-median
-comparison, so there is an obvious temptation to write one scorer here and
-have every detector call it. That may well be right - but which features go
-in, whether peers are restricted by stage, how many frames a divergence must
-persist and where the threshold sits are all decisions that differ per failure
-mode, and factoring them together before any of them has been calibrated
-against real chemistry would lock in a shape that has not been tested.
+One shape for every failure mode. A cycle hands in what the frame produced -
+the image, where the crucibles are, optionally the zone polygons - and each
+check hands back one `CheckResult`: did it fail, and by how much.
 
-If a common scorer does emerge, this is where it goes: import it from the
-detectors rather than growing a second copy in each.
+    cycle = Cycle(image=frame.image, positions=..., timestamp=..., ...)
+    for r in run_checks(cycle):
+        if r.failed:
+            log.error("%s: %s", r.name, r.message)
 
-The raw material is already available:
+Why functions and not classes: a check that looks at one frame and answers a
+question about it has no state to keep, and wrapping it in an object only
+hides that. State belongs to whatever is doing something with the answer -
+latching a hazard, counting frames before committing, deciding to stop. That
+is `MissingLid` at the bottom of this file: the stateless score is
+`check_missing_lid`, the latch and the run-stop are the class. New checks
+start as functions and only grow a class if they actually need to remember
+something between cycles.
 
-    pipeline.stats.median / mad / robust_z / iqr
-    ctx.feature_column(key, stage=...)   the batch's values for one feature
-    ctx.history.series(tid, key)         one vial's trajectory over time
-    DETECTION.robust_z_threshold         placeholder threshold, uncalibrated
-    DETECTION.min_vials_for_batch_stats  minimum peers before the median means
-                                         anything
+`score` is the number the verdict came from and is per-check, not comparable
+across checks - a lid gradient of 55 and a turbidity z of 3.5 mean nothing to
+each other. `subjects` carries the same number per crucible, so an overlay or
+a log can point at the one that failed rather than at the frame.
 
-The standing constraint, worth repeating here because this is the file where
-it is easiest to forget: no threshold in this system has been calibrated. The
-pipeline has been exercised against synthetic frames only, never against real
-chemistry, and a threshold crossing today demonstrates that the plumbing works
-and nothing whatsoever about the batch.
+Four of the five checks are not written yet. They return
+`implemented=False, failed=False` so the whole set can be wired into the
+runner now and read honestly on a dashboard: registered, looking at nothing.
+
+The standing constraint: no threshold in this file has been calibrated. The
+pipeline has been exercised against synthetic and bench frames, never against
+real chemistry, and a threshold crossing today demonstrates that the plumbing
+works and nothing whatsoever about the batch.
 """
 
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
 from typing import Callable
 
 import numpy as np
@@ -40,34 +47,189 @@ from pipeline.types import Event
 
 log = logging.getLogger(__name__)
 
-class Turbidity():
-    """
-    Detect change in cloudiness or haziness of the liquid
-    """
-    def __init__(self):
-        pass
 
-class SolGelTrans():
-    """
-    Detect change in matter from sol to gel 
-    """
-    def __init__(self):
-        pass
+# --------------------------------------------------------------------------
+# What one cycle hands to every check
+# --------------------------------------------------------------------------
+@dataclass
+class Cycle:
+    """One analysis frame's worth of input, shared by every check.
 
-class ColorChange():
+    `positions` is the only field a check can usually count on: crucible id
+    (heater slot, or track id - the caller decides, the checks only ever pass
+    it back out) mapped to its centre in frame pixels. `zones` is optional
+    because most checks look at a crucible, not at a region; a check that
+    needs a zone and did not get one returns not-implemented rather than
+    guessing where the heater is.
     """
-    Detect change in color of the crucible liquid when in heating stage
-    """
-    def __init__(self):
-        pass
 
-class FallenCrucible():
-    """
-    Detect if a crucible has fallen over
-    """
-    def __init__(self):
-        pass
+    image: np.ndarray
+    positions: dict[int, tuple[float, float]] = field(default_factory=dict)
+    #: zone name -> polygon in frame pixels, as ZoneMap.polygons_px gives it.
+    zones: dict[str, np.ndarray] | None = None
+    timestamp: float = 0.0
+    frame_id: int = 0
 
+    def zone(self, name: str) -> np.ndarray | None:
+        return None if self.zones is None else self.zones.get(name)
+
+
+@dataclass
+class CheckResult:
+    """One check's answer for one cycle."""
+
+    name: str
+    #: The verdict. False whenever the check is not implemented.
+    failed: bool = False
+    #: The number the verdict came from. Per-check units, None if unscored.
+    score: float | None = None
+    message: str = ""
+    #: crucible id -> that crucible's score, for the ones this check looked at.
+    subjects: dict[int, float] = field(default_factory=dict)
+    #: The ids that tripped the threshold - a subset of `subjects`.
+    offenders: list[int] = field(default_factory=list)
+    implemented: bool = True
+
+    def __bool__(self) -> bool:
+        return self.failed
+
+
+def _todo(name: str, what: str) -> CheckResult:
+    """Placeholder result for a check that has not been written."""
+    return CheckResult(name=name, failed=False, implemented=False,
+                       message=f"not implemented: {what}")
+
+
+# --------------------------------------------------------------------------
+# The checks
+# --------------------------------------------------------------------------
+def check_missing_lid(cycle: Cycle,
+                      threshold: float | None = None) -> CheckResult:
+    """Any crucible in `positions` without a lid.
+
+    The only implemented check. `lid_score` is a mean gradient magnitude in a
+    fixed window on the crucible centre - a lid breaks up the smooth interior
+    whether it reads bright or dark. Low score means open.
+
+    Stateless: it answers for this frame only. The latch, and the decision to
+    stop the run, live in `MissingLid` below.
+    """
+    limit = DETECTION.lid_score_threshold if threshold is None else threshold
+    scores = {cid: lid_score(cycle.image, cx, cy)
+              for cid, (cx, cy) in cycle.positions.items()}
+    open_jars = sorted(cid for cid, s in scores.items() if s < limit)
+    if open_jars:
+        ids = ", ".join(str(c) for c in open_jars)
+        message = f"crucible(s) {ids} have no lid (below {limit:.1f})"
+    elif scores:
+        message = f"all {len(scores)} crucible(s) lidded"
+    else:
+        message = "no crucibles to check"
+    return CheckResult(
+        name="missing_lid",
+        failed=bool(open_jars),
+        score=min(scores.values()) if scores else None,
+        message=message,
+        subjects={cid: round(s, 1) for cid, s in scores.items()},
+        offenders=open_jars,
+    )
+
+
+def check_fallen_crucible(cycle: Cycle) -> CheckResult:
+    """A crucible that has tipped over.
+
+    Wants a per-crucible shape measure - ellipse eccentricity, rim
+    circularity, or a centroid that jumped and then stopped moving - scored
+    against the batch, since 18 upright peers are the reference. Needs
+    pictures of a real tip-over before either the measure or the threshold
+    can be chosen.
+    """
+    return _todo("fallen_crucible", "no tip-over measure chosen yet")
+
+
+def check_turbidity(cycle: Cycle) -> CheckResult:
+    """Liquid gone cloudy or hazy.
+
+    Wants texture variance inside the liquid disc, compared against the
+    batch median rather than an absolute value.
+    """
+    return _todo("turbidity", "needs real cloudy-vs-clear captures")
+
+
+def check_solgel(cycle: Cycle) -> CheckResult:
+    """Sol-to-gel transition - liquid setting to solid.
+
+    Wants frame-to-frame differencing inside the disc: a set gel stops
+    showing the small surface motion a liquid does. Rate-based, so it needs
+    the cycle interval, which is why this one will likely be the first to
+    need more than a single frame.
+    """
+    return _todo("solgel", "needs a per-vial trajectory, not one frame")
+
+
+def check_color_change(cycle: Cycle) -> CheckResult:
+    """Gross colour change of the liquid, during heating.
+
+    Wants mean HSV inside the disc against the batch median, restricted to
+    crucibles at the same stage. Qualitative only - this is not colorimetry,
+    and the flat-field correction the LED panel needs is not in place.
+    """
+    return _todo("color_change", "needs flat-field correction and a baseline")
+
+
+#: Every fail-safe, in the order they run. Add new checks here.
+CHECKS: tuple[Callable[[Cycle], CheckResult], ...] = (
+    check_missing_lid,
+    check_fallen_crucible,
+    check_turbidity,
+    check_solgel,
+    check_color_change,
+)
+
+
+def run_checks(cycle: Cycle,
+               checks: tuple[Callable[[Cycle], CheckResult], ...] = CHECKS,
+               ) -> list[CheckResult]:
+    """Run every check over one cycle and return all their results.
+
+    A check that raises is caught and logged and comes back as a failed=False
+    result, so one broken check cannot take the cycle - or the other four -
+    down with it.
+    """
+    results: list[CheckResult] = []
+    for fn in checks:
+        name = getattr(fn, "__name__", "check").removeprefix("check_")
+        try:
+            results.append(fn(cycle))
+        except Exception:
+            log.exception("check %r raised - skipping it this cycle", name)
+            results.append(CheckResult(name=name, failed=False,
+                                       implemented=False,
+                                       message="raised, see log"))
+    return results
+
+
+def failures(results: list[CheckResult]) -> list[CheckResult]:
+    """Just the checks that tripped."""
+    return [r for r in results if r.failed]
+
+
+def to_events(results: list[CheckResult], cycle: Cycle,
+              severity: str = "alert") -> list[Event]:
+    """Failed checks as Events, for the log and the dashboard."""
+    return [
+        Event(kind=r.name, severity=severity, message=r.message,
+              timestamp=cycle.timestamp, frame_id=cycle.frame_id,
+              detector=r.name,
+              data={"score": r.score, "offenders": r.offenders,
+                    "subjects": r.subjects})
+        for r in results if r.failed
+    ]
+
+
+# --------------------------------------------------------------------------
+# The one check that needs memory
+# --------------------------------------------------------------------------
 class MissingLid:
     """A crucible put on a heater without a lid. Latching, and stops the run.
 
@@ -78,6 +240,10 @@ class MissingLid:
     one event is raised so the log does not fill with repeats. Because the
     first flag also stops the run, that state is effectively frozen at the
     moment of the stop - it is the record of why everything halted.
+
+    The scoring itself is `check_missing_lid` above - this class is only the
+    memory around it: which slots have already been asked, what the answer
+    was, and whether that answer stopped the run.
 
     Latching also protects the verdict. lid_score reads an overlapping
     distribution, so re-scoring the same jar every frame would eventually
@@ -145,11 +311,17 @@ class MissingLid:
             return []
 
         present = set(on_heater)
+        arrived = sorted(present - self._seen)
+        scored = check_missing_lid(
+            Cycle(image=image, positions={s: on_heater[s] for s in arrived},
+                  timestamp=timestamp, frame_id=frame_id),
+            threshold=self.threshold)
+
         events: list[Event] = []
-        for slot in sorted(present - self._seen):
+        for slot in arrived:
             cx, cy = on_heater[slot]
-            score = lid_score(image, cx, cy)
-            if score >= self.threshold:
+            score = scored.subjects[slot]
+            if slot not in scored.offenders:
                 log.info("heater slot %d: lid present (%.1f)", slot, score)
                 continue
             event = Event(

@@ -1,0 +1,4856 @@
+[
+  {
+    "frame": "20260828_164353_0000.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 10,
+          "cx": 1565.5,
+          "cy": 446.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 99.2
+        },
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": 11,
+          "cx": 1416.5,
+          "cy": 444.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 50.9
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2428.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 824.4
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1803.5,
+          "cy": 2454.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 745.7
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 4,
+          "cx": 2473.5,
+          "cy": 1348.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1087.2
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2334.5,
+          "cy": 1517.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 812.3
+        }
+      ]
+    },
+    "handoffs": [],
+    "closed": []
+  },
+  {
+    "frame": "20260828_164403_0001.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 10,
+          "cx": 1565.5,
+          "cy": 446.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 29.8
+        },
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": 11,
+          "cx": 1416.5,
+          "cy": 444.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 39.4
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 8,
+          "cx": 1411.5,
+          "cy": 597.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 87.8
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 9,
+          "cx": 1565.5,
+          "cy": 575.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 111.6
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2427.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 802.5
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1798.5,
+          "cy": 2456.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 767.2
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 4,
+          "cx": 2473.5,
+          "cy": 1348.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 910.7
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2334.5,
+          "cy": 1517.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2148.8
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 10,
+          "cx": 2331.5,
+          "cy": 1847.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 795.7
+        }
+      ]
+    },
+    "handoffs": [],
+    "closed": []
+  },
+  {
+    "frame": "20260828_164413_0002.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 10,
+          "cx": 1565.5,
+          "cy": 446.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 103.7
+        },
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": 11,
+          "cx": 1416.5,
+          "cy": 444.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 129.0
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 8,
+          "cx": 1411.5,
+          "cy": 597.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 130.7
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 9,
+          "cx": 1565.5,
+          "cy": 575.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 116.0
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 7,
+          "cx": 1574.5,
+          "cy": 742.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 163.3
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 6,
+          "cx": 1405.5,
+          "cy": 753.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 86.6
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2428.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 852.9
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1799.5,
+          "cy": 2456.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 748.0
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 4,
+          "cx": 2473.5,
+          "cy": 1348.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1779.1
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2334.5,
+          "cy": 1517.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2166.9
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 10,
+          "cx": 2331.5,
+          "cy": 1847.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2352.2
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 6,
+          "cx": 2475.5,
+          "cy": 1513.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 890.4
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 3,
+          "cx": 2334.5,
+          "cy": 1351.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 664.0
+        }
+      ]
+    },
+    "handoffs": [],
+    "closed": []
+  },
+  {
+    "frame": "20260828_164423_0003.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 8,
+          "cx": 1411.5,
+          "cy": 597.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 8.6
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 9,
+          "cx": 1565.5,
+          "cy": 575.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 9.3
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 7,
+          "cx": 1575.5,
+          "cy": 741.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 109.6
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 6,
+          "cx": 1406.5,
+          "cy": 754.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 92.3
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2428.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 865.8
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1803.5,
+          "cy": 2454.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 737.7
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 4,
+          "cx": 2473.5,
+          "cy": 1348.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1786.5
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 10,
+          "cx": 2331.5,
+          "cy": 1847.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2323.6
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 6,
+          "cx": 2475.5,
+          "cy": 1512.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 883.3
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 3,
+          "cx": 2333.5,
+          "cy": 1352.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 662.1
+        }
+      ]
+    },
+    "handoffs": [],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 1,
+        "reason": "vacated"
+      },
+      {
+        "zone": "storing",
+        "track_id": 2,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 6,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164433_0004.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 7,
+          "cx": 1575.5,
+          "cy": 741.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 20.1
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 6,
+          "cx": 1406.5,
+          "cy": 754.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 19.8
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 5,
+          "cx": 1572.5,
+          "cy": 887.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 210.6
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 4,
+          "cx": 1429.5,
+          "cy": 896.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 141.9
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2428.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 842.6
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1798.5,
+          "cy": 2456.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 781.9
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 10,
+          "cx": 2327.5,
+          "cy": 1848.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 937.7
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 6,
+          "cx": 2475.5,
+          "cy": 1512.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2656.2
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 3,
+          "cx": 2333.5,
+          "cy": 1352.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1440.8
+        },
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2477.5,
+          "cy": 1850.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 964.2
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 7,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 8,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 5,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 7,
+        "reason": "vacated"
+      },
+      {
+        "zone": "storing",
+        "track_id": 8,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 5,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164444_0005.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 7,
+          "cx": 1575.5,
+          "cy": 741.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 14.6
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 6,
+          "cx": 1406.5,
+          "cy": 754.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 14.2
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 5,
+          "cx": 1572.5,
+          "cy": 887.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 17.7
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 4,
+          "cx": 1428.5,
+          "cy": 896.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 170.5
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 1,
+          "cx": 1577.5,
+          "cy": 1046.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 214.7
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2428.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 836.5
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1803.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 731.2
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 10,
+          "cx": 2327.5,
+          "cy": 1848.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1679.1
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 6,
+          "cx": 2475.5,
+          "cy": 1512.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2666.3
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 3,
+          "cx": 2333.5,
+          "cy": 1352.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1408.1
+        },
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2475.5,
+          "cy": 1851.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 926.5
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 13,
+          "cx": 2329.5,
+          "cy": 2020.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 919.2
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 1,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 6,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": []
+  },
+  {
+    "frame": "20260828_164454_0006.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 5,
+          "cx": 1572.5,
+          "cy": 887.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 13.6
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 4,
+          "cx": 1428.5,
+          "cy": 896.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 16.6
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 1,
+          "cx": 1577.5,
+          "cy": 1046.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 18.8
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 0,
+          "cx": 1424.5,
+          "cy": 1029.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 164.3
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 2,
+          "cx": 1566.5,
+          "cy": 1193.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 307.1
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2427.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 789.3
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1803.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 742.9
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 10,
+          "cx": 2327.5,
+          "cy": 1848.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1667.8
+        },
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2476.5,
+          "cy": 1850.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 859.0
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 13,
+          "cx": 2329.5,
+          "cy": 2020.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2088.4
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 12,
+          "cx": 2195.5,
+          "cy": 2019.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 862.8
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 11,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 10,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 13,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 11,
+        "reason": "vacated"
+      },
+      {
+        "zone": "storing",
+        "track_id": 10,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 13,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 12,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164504_0007.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 4,
+          "cx": 1428.5,
+          "cy": 896.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 13.6
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 1,
+          "cx": 1577.5,
+          "cy": 1046.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 20.5
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 0,
+          "cx": 1424.5,
+          "cy": 1029.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 17.1
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 2,
+          "cx": 1567.5,
+          "cy": 1193.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 325.3
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 3,
+          "cx": 1428.5,
+          "cy": 1198.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 203.0
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2428.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 852.1
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1803.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 746.6
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2476.5,
+          "cy": 1850.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2093.6
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 13,
+          "cx": 2329.5,
+          "cy": 2020.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2041.4
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 12,
+          "cx": 2194.5,
+          "cy": 2018.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 681.7
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 14,
+          "cx": 2474.5,
+          "cy": 2020.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 915.2
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 7,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 9,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 7,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 9,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164514_0008.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 4,
+          "cx": 1423.5,
+          "cy": 893.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 201.8
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 0,
+          "cx": 1424.5,
+          "cy": 1029.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 18.7
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 2,
+          "cx": 1567.5,
+          "cy": 1193.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 292.7
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 3,
+          "cx": 1428.5,
+          "cy": 1198.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 21.3
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2059.5,
+          "cy": 2428.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 733.6
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1803.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 743.6
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2474.5,
+          "cy": 1850.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1057.9
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 12,
+          "cx": 2194.5,
+          "cy": 2018.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1406.9
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 14,
+          "cx": 2474.5,
+          "cy": 2020.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1599.4
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 9,
+          "cx": 2190.5,
+          "cy": 1855.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 697.7
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 6,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 1,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 6,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164524_0009.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 4,
+          "cx": 1423.5,
+          "cy": 893.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 19.2
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 2,
+          "cx": 1567.5,
+          "cy": 1193.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 276.6
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 3,
+          "cx": 1428.5,
+          "cy": 1198.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 15.4
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 6,
+          "cx": 1422.5,
+          "cy": 741.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 104.9
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2428.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 885.6
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1799.5,
+          "cy": 2456.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 744.6
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2474.5,
+          "cy": 1850.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2031.6
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 12,
+          "cx": 2194.5,
+          "cy": 2018.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1409.8
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 14,
+          "cx": 2470.5,
+          "cy": 2021.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 819.3
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 9,
+          "cx": 2190.5,
+          "cy": 1855.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2104.0
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 1,
+          "cx": 2188.5,
+          "cy": 1514.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 862.0
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 11,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 12,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 11,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164534_0010.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 4,
+          "cx": 1423.5,
+          "cy": 893.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 21.9
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 2,
+          "cx": 1567.5,
+          "cy": 1193.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 25.2
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 6,
+          "cx": 1422.5,
+          "cy": 741.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 19.7
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 5,
+          "cx": 1575.5,
+          "cy": 884.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 252.0
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 11,
+          "cx": 1421.5,
+          "cy": 444.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 49.0
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2058.5,
+          "cy": 2432.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 773.3
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1803.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 761.4
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2474.5,
+          "cy": 1850.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2075.8
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 14,
+          "cx": 2470.5,
+          "cy": 2021.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1522.2
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 9,
+          "cx": 2190.5,
+          "cy": 1855.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2118.4
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 1,
+          "cx": 2188.5,
+          "cy": 1514.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2351.4
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2477.5,
+          "cy": 1346.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 764.7
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 5,
+          "cx": 2181.5,
+          "cy": 1344.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 659.1
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 7,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 1,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 13,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 7,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 13,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164544_0011.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 2,
+          "cx": 1567.5,
+          "cy": 1193.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 13.3
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 6,
+          "cx": 1422.5,
+          "cy": 741.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 11.0
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 5,
+          "cx": 1575.5,
+          "cy": 884.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 241.9
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 11,
+          "cx": 1421.5,
+          "cy": 444.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 39.1
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 10,
+          "cx": 1552.5,
+          "cy": 451.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 39.7
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2056.5,
+          "cy": 2428.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 803.7
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1803.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 749.8
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 14,
+          "cx": 2470.5,
+          "cy": 2021.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1534.5
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 1,
+          "cx": 2188.5,
+          "cy": 1514.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2395.5
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2478.5,
+          "cy": 1347.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 758.0
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 5,
+          "cx": 2181.5,
+          "cy": 1344.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1402.4
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2335.5,
+          "cy": 1510.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 782.6
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 8,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 6,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 8,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 6,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 5,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164555_0012.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 5,
+          "cx": 1576.5,
+          "cy": 883.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 193.0
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 11,
+          "cx": 1421.5,
+          "cy": 444.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 25.2
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 10,
+          "cx": 1552.5,
+          "cy": 451.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 11.4
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 9,
+          "cx": 1565.5,
+          "cy": 582.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 84.1
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2059.5,
+          "cy": 2423.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 725.1
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1803.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 750.7
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2478.5,
+          "cy": 1347.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 768.3
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 5,
+          "cx": 2181.5,
+          "cy": 1344.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1406.3
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2333.5,
+          "cy": 1509.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 745.8
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 10,
+        "from": "storing",
+        "to": "storing"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 10,
+        "reason": "vacated"
+      },
+      {
+        "zone": "storing",
+        "track_id": 11,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 12,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 9,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164605_0013.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 5,
+          "cx": 1576.5,
+          "cy": 887.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 198.6
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 10,
+          "cx": 1552.5,
+          "cy": 451.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 13.9
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 9,
+          "cx": 1565.5,
+          "cy": 582.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 10.8
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 7,
+          "cx": 1568.5,
+          "cy": 746.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 100.6
+        }
+      ],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2428.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 870.1
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1799.5,
+          "cy": 2456.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 756.6
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2478.5,
+          "cy": 1347.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1887.0
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2337.5,
+          "cy": 1512.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 845.7
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 3,
+          "cx": 2339.5,
+          "cy": 1346.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 869.4
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 1,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 30,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 1,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 30,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164615_0014.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 5,
+          "cx": 1576.5,
+          "cy": 887.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 16.1
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 9,
+          "cx": 1565.5,
+          "cy": 582.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 12.7
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 7,
+          "cx": 1568.5,
+          "cy": 745.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 101.9
+        }
+      ],
+      "injection": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": null,
+          "cx": 1565.5,
+          "cy": 1503.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 419.0
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2064.5,
+          "cy": 2429.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 822.0
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1804.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 752.3
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2478.5,
+          "cy": 1347.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1880.6
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2337.5,
+          "cy": 1511.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 805.4
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 3,
+          "cx": 2339.5,
+          "cy": 1346.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 861.0
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 8,
+        "from": "storing",
+        "to": "injection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 8,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164625_0015.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 5,
+          "cx": 1576.5,
+          "cy": 887.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 16.0
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 7,
+          "cx": 1568.5,
+          "cy": 745.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 12.4
+        }
+      ],
+      "injection": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": null,
+          "cx": 1564.5,
+          "cy": 1502.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 461.7
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": null,
+          "cx": 1571.5,
+          "cy": 1892.5,
+          "stage": "injection",
+          "queue_pos": 1,
+          "lid": "open",
+          "lid_score": 382.2
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2059.5,
+          "cy": 2429.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 867.2
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1798.5,
+          "cy": 2457.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 745.9
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2335.5,
+          "cy": 1510.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 788.7
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 3,
+          "cx": 2339.5,
+          "cy": 1347.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 749.1
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 10,
+        "from": "storing",
+        "to": "injection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 10,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 13,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164635_0016.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 7,
+          "cx": 1568.5,
+          "cy": 745.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 23.2
+        }
+      ],
+      "injection": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": null,
+          "cx": 1564.5,
+          "cy": 1502.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 135.3
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": null,
+          "cx": 1570.5,
+          "cy": 1892.5,
+          "stage": "injection",
+          "queue_pos": 1,
+          "lid": "open",
+          "lid_score": 409.0
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2429.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 857.4
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1803.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 757.1
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2339.5,
+          "cy": 1515.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 834.6
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 3,
+          "cx": 2339.5,
+          "cy": 1347.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 860.9
+        }
+      ]
+    },
+    "handoffs": [],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 7,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164645_0017.jpg",
+    "zones": {
+      "storing": [],
+      "injection": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": null,
+          "cx": 1564.5,
+          "cy": 1502.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 114.9
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": null,
+          "cx": 1571.5,
+          "cy": 1921.5,
+          "stage": "injection",
+          "queue_pos": 1,
+          "lid": "open",
+          "lid_score": 477.5
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2427.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 776.0
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1803.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 745.1
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2336.5,
+          "cy": 1510.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 856.5
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 3,
+          "cx": 2339.5,
+          "cy": 1347.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 762.2
+        }
+      ]
+    },
+    "handoffs": [],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 1,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164656_0018.jpg",
+    "zones": {
+      "storing": [],
+      "injection": [
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": null,
+          "cx": 1571.5,
+          "cy": 1921.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 443.0
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2427.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 473.4
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1799.5,
+          "cy": 2456.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 764.6
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2336.5,
+          "cy": 1510.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1899.3
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 3,
+          "cx": 2339.5,
+          "cy": 1347.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1441.8
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2472.5,
+          "cy": 1349.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 910.5
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 13,
+          "cx": 2335.5,
+          "cy": 2028.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 847.2
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 5,
+          "cx": 2188.5,
+          "cy": 1347.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 687.9
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 13,
+        "from": "collection",
+        "to": "collection"
+      },
+      {
+        "track_id": 12,
+        "from": "collection",
+        "to": "collection"
+      },
+      {
+        "track_id": 9,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "injection",
+        "track_id": 8,
+        "reason": "lost"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164706_0019.jpg",
+    "zones": {
+      "storing": [],
+      "injection": [
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": null,
+          "cx": 1571.5,
+          "cy": 1921.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 427.4
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2060.5,
+          "cy": 2427.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 474.7
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1804.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 744.9
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 0,
+          "cx": 2336.5,
+          "cy": 1510.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1892.8
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 3,
+          "cx": 2339.5,
+          "cy": 1347.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1417.5
+        },
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2472.5,
+          "cy": 1352.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1017.0
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 13,
+          "cx": 2335.5,
+          "cy": 2029.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 814.6
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 5,
+          "cx": 2186.5,
+          "cy": 1346.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 650.5
+        }
+      ]
+    },
+    "handoffs": [],
+    "closed": []
+  },
+  {
+    "frame": "20260828_164716_0020.jpg",
+    "zones": {
+      "storing": [],
+      "injection": [
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": null,
+          "cx": 1572.5,
+          "cy": 1920.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 459.4
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2024.5,
+          "cy": 2433.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 861.9
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1838.5,
+          "cy": 2448.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 820.0
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2472.5,
+          "cy": 1349.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 922.0
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 13,
+          "cx": 2335.5,
+          "cy": 2029.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1113.3
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 5,
+          "cx": 2186.5,
+          "cy": 1346.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1662.8
+        }
+      ]
+    },
+    "handoffs": [],
+    "closed": [
+      {
+        "zone": "collection",
+        "track_id": 6,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 30,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164726_0021.jpg",
+    "zones": {
+      "storing": [],
+      "injection": [
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": null,
+          "cx": 1572.5,
+          "cy": 1920.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 439.9
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2024.5,
+          "cy": 2432.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 868.8
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1837.5,
+          "cy": 2448.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 827.6
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2470.5,
+          "cy": 1350.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 936.5
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 13,
+          "cx": 2335.5,
+          "cy": 2029.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1086.4
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 5,
+          "cx": 2186.5,
+          "cy": 1346.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1644.4
+        }
+      ]
+    },
+    "handoffs": [],
+    "closed": []
+  },
+  {
+    "frame": "20260828_164736_0022.jpg",
+    "zones": {
+      "storing": [],
+      "injection": [
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": null,
+          "cx": 1572.5,
+          "cy": 1919.5,
+          "stage": "injection",
+          "queue_pos": 1,
+          "lid": "open",
+          "lid_score": 474.7
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": null,
+          "cx": 1560.5,
+          "cy": 1526.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 557.9
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2024.5,
+          "cy": 2434.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 832.9
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1833.5,
+          "cy": 2447.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 793.1
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2471.5,
+          "cy": 1348.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 867.9
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 8,
+        "from": "injection",
+        "to": "injection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "collection",
+        "track_id": 9,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 12,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164746_0023.jpg",
+    "zones": {
+      "storing": [],
+      "injection": [
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": null,
+          "cx": 1567.5,
+          "cy": 1918.5,
+          "stage": "injection",
+          "queue_pos": 1,
+          "lid": "lid",
+          "lid_score": 762.0
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": null,
+          "cx": 1553.5,
+          "cy": 1517.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "lid",
+          "lid_score": 1107.1
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2025.5,
+          "cy": 2434.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 877.8
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1837.5,
+          "cy": 2449.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 857.2
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2472.5,
+          "cy": 1349.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 923.9
+        }
+      ]
+    },
+    "handoffs": [],
+    "closed": []
+  },
+  {
+    "frame": "20260828_164757_0024.jpg",
+    "zones": {
+      "storing": [],
+      "injection": [
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": null,
+          "cx": 1567.5,
+          "cy": 1918.5,
+          "stage": "injection",
+          "queue_pos": 1,
+          "lid": "open",
+          "lid_score": 58.5
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": null,
+          "cx": 1553.5,
+          "cy": 1517.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 440.9
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2020.5,
+          "cy": 2434.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 892.4
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1836.5,
+          "cy": 2446.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 732.7
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2471.5,
+          "cy": 1350.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 929.0
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 0,
+          "cx": 2329.5,
+          "cy": 1516.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1047.0
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 9,
+          "cx": 2197.5,
+          "cy": 1854.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 967.9
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 9,
+        "from": "collection",
+        "to": "collection"
+      },
+      {
+        "track_id": 12,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": []
+  },
+  {
+    "frame": "20260828_164807_0025.jpg",
+    "zones": {
+      "storing": [],
+      "injection": [
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": null,
+          "cx": 1567.5,
+          "cy": 1918.5,
+          "stage": "injection",
+          "queue_pos": 1,
+          "lid": "open",
+          "lid_score": 119.0
+        },
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": null,
+          "cx": 1553.5,
+          "cy": 1517.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 469.3
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2020.5,
+          "cy": 2434.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 709.4
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1836.5,
+          "cy": 2446.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 261.5
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2471.5,
+          "cy": 1350.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 932.7
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 0,
+          "cx": 2330.5,
+          "cy": 1516.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 987.4
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 9,
+          "cx": 2195.5,
+          "cy": 1850.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 842.3
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 14,
+          "cx": 2469.5,
+          "cy": 2022.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 868.4
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 10,
+          "cx": 2351.5,
+          "cy": 1858.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 931.3
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 6,
+        "from": "collection",
+        "to": "collection"
+      },
+      {
+        "track_id": 30,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": []
+  },
+  {
+    "frame": "20260828_164817_0026.jpg",
+    "zones": {
+      "storing": [],
+      "injection": [],
+      "heating": [
+        {
+          "track_id": 3,
+          "label": "003",
+          "slot_id": 0,
+          "cx": 2020.5,
+          "cy": 2434.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 665.0
+        },
+        {
+          "track_id": 4,
+          "label": "004",
+          "slot_id": 1,
+          "cx": 1836.5,
+          "cy": 2446.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 247.3
+        }
+      ],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2472.5,
+          "cy": 1352.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 972.1
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 0,
+          "cx": 2330.5,
+          "cy": 1516.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 985.6
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 9,
+          "cx": 2196.5,
+          "cy": 1850.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 844.8
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 14,
+          "cx": 2470.5,
+          "cy": 2023.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 832.0
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 10,
+          "cx": 2351.5,
+          "cy": 1858.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 973.0
+        },
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2473.5,
+          "cy": 1848.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 819.4
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 5,
+        "from": "collection",
+        "to": "collection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "injection",
+        "track_id": 8,
+        "reason": "lost"
+      },
+      {
+        "zone": "injection",
+        "track_id": 10,
+        "reason": "advanced"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164827_0027.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 9,
+          "cx": 1569.5,
+          "cy": 584.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 72.6
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 11,
+          "cx": 1409.5,
+          "cy": 447.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 79.6
+        }
+      ],
+      "injection": [],
+      "heating": [],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2472.5,
+          "cy": 1352.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1579.4
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 0,
+          "cx": 2330.5,
+          "cy": 1516.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2702.8
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 9,
+          "cx": 2196.5,
+          "cy": 1850.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 824.3
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 14,
+          "cx": 2471.5,
+          "cy": 2022.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 860.9
+        },
+        {
+          "track_id": 30,
+          "label": "030",
+          "slot_id": 10,
+          "cx": 2351.5,
+          "cy": 1858.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 952.9
+        },
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2477.5,
+          "cy": 1850.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 866.6
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 8,
+        "from": "injection",
+        "to": "storing"
+      },
+      {
+        "track_id": 10,
+        "from": "injection",
+        "to": "storing"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "heating",
+        "track_id": 3,
+        "reason": "vacated"
+      },
+      {
+        "zone": "heating",
+        "track_id": 4,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164837_0028.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 9,
+          "cx": 1568.5,
+          "cy": 587.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 73.1
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 11,
+          "cx": 1408.5,
+          "cy": 448.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 82.0
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 10,
+          "cx": 1572.5,
+          "cy": 452.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 89.5
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 8,
+          "cx": 1412.5,
+          "cy": 600.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 76.9
+        }
+      ],
+      "injection": [],
+      "heating": [],
+      "collection": [
+        {
+          "track_id": 13,
+          "label": "013",
+          "slot_id": 4,
+          "cx": 2472.5,
+          "cy": 1352.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1548.7
+        },
+        {
+          "track_id": 9,
+          "label": "009",
+          "slot_id": 0,
+          "cx": 2330.5,
+          "cy": 1516.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2660.8
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 9,
+          "cx": 2196.5,
+          "cy": 1851.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 833.4
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 14,
+          "cx": 2470.5,
+          "cy": 2023.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 837.8
+        },
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2475.5,
+          "cy": 1852.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 948.8
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 1,
+        "from": "storing",
+        "to": "storing"
+      },
+      {
+        "track_id": 7,
+        "from": "storing",
+        "to": "storing"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "collection",
+        "track_id": 30,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164847_0029.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 9,
+          "cx": 1569.5,
+          "cy": 587.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 95.4
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 11,
+          "cx": 1408.5,
+          "cy": 448.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 87.6
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 10,
+          "cx": 1572.5,
+          "cy": 450.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 94.6
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 8,
+          "cx": 1413.5,
+          "cy": 599.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 73.1
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 7,
+          "cx": 1578.5,
+          "cy": 745.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 132.3
+        }
+      ],
+      "injection": [],
+      "heating": [],
+      "collection": [
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 9,
+          "cx": 2196.5,
+          "cy": 1851.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1570.1
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 14,
+          "cx": 2472.5,
+          "cy": 2022.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 863.6
+        },
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2475.5,
+          "cy": 1852.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2399.8
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 11,
+        "from": "storing",
+        "to": "storing"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "collection",
+        "track_id": 9,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 13,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164857_0030.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 9,
+          "cx": 1569.5,
+          "cy": 586.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 84.1
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 11,
+          "cx": 1408.5,
+          "cy": 448.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 76.7
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 10,
+          "cx": 1570.5,
+          "cy": 453.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 73.3
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 8,
+          "cx": 1411.5,
+          "cy": 595.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 72.8
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 7,
+          "cx": 1572.5,
+          "cy": 738.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 117.4
+        },
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": 6,
+          "cx": 1423.5,
+          "cy": 741.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 93.4
+        },
+        {
+          "track_id": 53,
+          "label": "053",
+          "slot_id": 5,
+          "cx": 1578.5,
+          "cy": 891.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 256.4
+        }
+      ],
+      "injection": [],
+      "heating": [],
+      "collection": [
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 9,
+          "cx": 2196.5,
+          "cy": 1851.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1587.1
+        },
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 14,
+          "cx": 2472.5,
+          "cy": 2022.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1427.3
+        },
+        {
+          "track_id": 5,
+          "label": "005",
+          "slot_id": 11,
+          "cx": 2475.5,
+          "cy": 1852.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 2389.4
+        }
+      ]
+    },
+    "handoffs": [
+      {
+        "track_id": 2,
+        "from": "storing",
+        "to": "storing"
+      }
+    ],
+    "closed": []
+  },
+  {
+    "frame": "20260828_164908_0031.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 9,
+          "cx": 1568.5,
+          "cy": 588.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 155.2
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 11,
+          "cx": 1408.5,
+          "cy": 448.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 91.4
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 10,
+          "cx": 1570.5,
+          "cy": 453.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 83.1
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 8,
+          "cx": 1412.5,
+          "cy": 595.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 160.9
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 7,
+          "cx": 1573.5,
+          "cy": 739.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 216.0
+        },
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": 6,
+          "cx": 1423.5,
+          "cy": 741.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 126.4
+        },
+        {
+          "track_id": 53,
+          "label": "053",
+          "slot_id": 5,
+          "cx": 1575.5,
+          "cy": 884.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 303.6
+        },
+        {
+          "track_id": 54,
+          "label": "054",
+          "slot_id": 1,
+          "cx": 1592.5,
+          "cy": 1020.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 216.9
+        },
+        {
+          "track_id": 55,
+          "label": "055",
+          "slot_id": 0,
+          "cx": 1414.5,
+          "cy": 1051.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 286.2
+        },
+        {
+          "track_id": 56,
+          "label": "056",
+          "slot_id": 4,
+          "cx": 1427.5,
+          "cy": 890.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 240.2
+        }
+      ],
+      "injection": [],
+      "heating": [],
+      "collection": [
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 14,
+          "cx": 2472.5,
+          "cy": 2022.5,
+          "stage": "collection",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 1451.3
+        }
+      ]
+    },
+    "handoffs": [],
+    "closed": [
+      {
+        "zone": "collection",
+        "track_id": 12,
+        "reason": "vacated"
+      },
+      {
+        "zone": "collection",
+        "track_id": 5,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164918_0032.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 9,
+          "cx": 1568.5,
+          "cy": 588.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 21.0
+        },
+        {
+          "track_id": 10,
+          "label": "010",
+          "slot_id": 11,
+          "cx": 1408.5,
+          "cy": 448.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 39.4
+        },
+        {
+          "track_id": 1,
+          "label": "001",
+          "slot_id": 10,
+          "cx": 1570.5,
+          "cy": 453.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 25.8
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 8,
+          "cx": 1412.5,
+          "cy": 595.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 21.0
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 7,
+          "cx": 1575.5,
+          "cy": 745.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 127.9
+        },
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": 6,
+          "cx": 1423.5,
+          "cy": 741.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 21.7
+        },
+        {
+          "track_id": 53,
+          "label": "053",
+          "slot_id": 5,
+          "cx": 1575.5,
+          "cy": 885.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 237.4
+        },
+        {
+          "track_id": 54,
+          "label": "054",
+          "slot_id": 1,
+          "cx": 1589.5,
+          "cy": 1021.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 197.1
+        },
+        {
+          "track_id": 55,
+          "label": "055",
+          "slot_id": 0,
+          "cx": 1414.5,
+          "cy": 1050.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 223.9
+        },
+        {
+          "track_id": 56,
+          "label": "056",
+          "slot_id": 4,
+          "cx": 1424.5,
+          "cy": 894.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 148.4
+        },
+        {
+          "track_id": 57,
+          "label": "057",
+          "slot_id": 2,
+          "cx": 1586.5,
+          "cy": 1174.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 246.3
+        },
+        {
+          "track_id": 58,
+          "label": "058",
+          "slot_id": 3,
+          "cx": 1439.5,
+          "cy": 1187.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 141.4
+        }
+      ],
+      "injection": [],
+      "heating": [],
+      "collection": []
+    },
+    "handoffs": [],
+    "closed": [
+      {
+        "zone": "collection",
+        "track_id": 6,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164928_0033.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 8,
+          "label": "008",
+          "slot_id": 9,
+          "cx": 1568.5,
+          "cy": 588.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 11.8
+        },
+        {
+          "track_id": 7,
+          "label": "007",
+          "slot_id": 8,
+          "cx": 1412.5,
+          "cy": 595.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 9.2
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 7,
+          "cx": 1575.5,
+          "cy": 745.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 12.3
+        },
+        {
+          "track_id": 53,
+          "label": "053",
+          "slot_id": 5,
+          "cx": 1576.5,
+          "cy": 885.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 258.2
+        },
+        {
+          "track_id": 54,
+          "label": "054",
+          "slot_id": 1,
+          "cx": 1588.5,
+          "cy": 1021.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 168.7
+        },
+        {
+          "track_id": 55,
+          "label": "055",
+          "slot_id": 0,
+          "cx": 1414.5,
+          "cy": 1051.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 248.2
+        },
+        {
+          "track_id": 56,
+          "label": "056",
+          "slot_id": 4,
+          "cx": 1424.5,
+          "cy": 894.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 140.4
+        },
+        {
+          "track_id": 57,
+          "label": "057",
+          "slot_id": 2,
+          "cx": 1587.5,
+          "cy": 1173.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 253.2
+        },
+        {
+          "track_id": 58,
+          "label": "058",
+          "slot_id": 3,
+          "cx": 1440.5,
+          "cy": 1188.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 150.7
+        }
+      ],
+      "injection": [
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": null,
+          "cx": 1565.5,
+          "cy": 1522.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 530.8
+        }
+      ],
+      "heating": [],
+      "collection": []
+    },
+    "handoffs": [
+      {
+        "track_id": 2,
+        "from": "storing",
+        "to": "injection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 2,
+        "reason": "vacated"
+      },
+      {
+        "zone": "storing",
+        "track_id": 1,
+        "reason": "vacated"
+      },
+      {
+        "zone": "storing",
+        "track_id": 10,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164938_0034.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": 7,
+          "cx": 1575.5,
+          "cy": 745.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 17.9
+        },
+        {
+          "track_id": 53,
+          "label": "053",
+          "slot_id": 5,
+          "cx": 1576.5,
+          "cy": 885.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 265.7
+        },
+        {
+          "track_id": 54,
+          "label": "054",
+          "slot_id": 1,
+          "cx": 1588.5,
+          "cy": 1021.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 193.6
+        },
+        {
+          "track_id": 55,
+          "label": "055",
+          "slot_id": 0,
+          "cx": 1414.5,
+          "cy": 1051.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 228.2
+        },
+        {
+          "track_id": 56,
+          "label": "056",
+          "slot_id": 4,
+          "cx": 1424.5,
+          "cy": 894.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 29.9
+        },
+        {
+          "track_id": 57,
+          "label": "057",
+          "slot_id": 2,
+          "cx": 1586.5,
+          "cy": 1174.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 264.1
+        },
+        {
+          "track_id": 58,
+          "label": "058",
+          "slot_id": 3,
+          "cx": 1439.5,
+          "cy": 1186.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 179.3
+        }
+      ],
+      "injection": [
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": null,
+          "cx": 1560.5,
+          "cy": 1518.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 583.6
+        }
+      ],
+      "heating": [],
+      "collection": []
+    },
+    "handoffs": [],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 7,
+        "reason": "vacated"
+      },
+      {
+        "zone": "storing",
+        "track_id": 8,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164948_0035.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 53,
+          "label": "053",
+          "slot_id": 5,
+          "cx": 1576.5,
+          "cy": 885.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 42.2
+        },
+        {
+          "track_id": 54,
+          "label": "054",
+          "slot_id": 1,
+          "cx": 1592.5,
+          "cy": 1017.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 42.7
+        },
+        {
+          "track_id": 55,
+          "label": "055",
+          "slot_id": 0,
+          "cx": 1414.5,
+          "cy": 1051.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 42.0
+        },
+        {
+          "track_id": 56,
+          "label": "056",
+          "slot_id": 4,
+          "cx": 1424.5,
+          "cy": 894.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 26.8
+        },
+        {
+          "track_id": 57,
+          "label": "057",
+          "slot_id": 2,
+          "cx": 1586.5,
+          "cy": 1174.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 27.4
+        },
+        {
+          "track_id": 58,
+          "label": "058",
+          "slot_id": 3,
+          "cx": 1439.5,
+          "cy": 1186.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 18.0
+        }
+      ],
+      "injection": [
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": null,
+          "cx": 1560.5,
+          "cy": 1518.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 27.2
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": null,
+          "cx": 1572.5,
+          "cy": 1933.5,
+          "stage": "injection",
+          "queue_pos": 1,
+          "lid": "open",
+          "lid_score": 81.8
+        }
+      ],
+      "heating": [],
+      "collection": []
+    },
+    "handoffs": [
+      {
+        "track_id": 11,
+        "from": "storing",
+        "to": "injection"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 11,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_164958_0036.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 53,
+          "label": "053",
+          "slot_id": 5,
+          "cx": 1575.5,
+          "cy": 885.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 217.5
+        },
+        {
+          "track_id": 54,
+          "label": "054",
+          "slot_id": 1,
+          "cx": 1588.5,
+          "cy": 1022.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 207.3
+        },
+        {
+          "track_id": 55,
+          "label": "055",
+          "slot_id": 0,
+          "cx": 1415.5,
+          "cy": 1050.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 206.7
+        },
+        {
+          "track_id": 57,
+          "label": "057",
+          "slot_id": 2,
+          "cx": 1587.5,
+          "cy": 1173.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 237.7
+        },
+        {
+          "track_id": 58,
+          "label": "058",
+          "slot_id": 3,
+          "cx": 1439.5,
+          "cy": 1186.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 18.7
+        }
+      ],
+      "injection": [
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": null,
+          "cx": 1560.5,
+          "cy": 1517.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "lid",
+          "lid_score": 647.3
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": null,
+          "cx": 1574.5,
+          "cy": 1935.5,
+          "stage": "injection",
+          "queue_pos": 1,
+          "lid": "lid",
+          "lid_score": 700.4
+        }
+      ],
+      "heating": [],
+      "collection": []
+    },
+    "handoffs": [],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 56,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_165009_0037.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 53,
+          "label": "053",
+          "slot_id": 5,
+          "cx": 1575.5,
+          "cy": 885.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 18.8
+        },
+        {
+          "track_id": 54,
+          "label": "054",
+          "slot_id": 1,
+          "cx": 1587.5,
+          "cy": 1026.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 188.8
+        },
+        {
+          "track_id": 55,
+          "label": "055",
+          "slot_id": 0,
+          "cx": 1414.5,
+          "cy": 1050.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 233.8
+        },
+        {
+          "track_id": 57,
+          "label": "057",
+          "slot_id": 2,
+          "cx": 1587.5,
+          "cy": 1174.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 263.0
+        }
+      ],
+      "injection": [
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": null,
+          "cx": 1559.5,
+          "cy": 1515.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "lid",
+          "lid_score": 628.5
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": null,
+          "cx": 1574.5,
+          "cy": 1929.5,
+          "stage": "injection",
+          "queue_pos": 1,
+          "lid": "lid",
+          "lid_score": 627.0
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 1,
+          "cx": 1816.5,
+          "cy": 2455.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 636.7
+        }
+      ],
+      "collection": []
+    },
+    "handoffs": [
+      {
+        "track_id": 6,
+        "from": "collection",
+        "to": "heating"
+      }
+    ],
+    "closed": [
+      {
+        "zone": "storing",
+        "track_id": 58,
+        "reason": "vacated"
+      }
+    ]
+  },
+  {
+    "frame": "20260828_165019_0038.jpg",
+    "zones": {
+      "storing": [
+        {
+          "track_id": 53,
+          "label": "053",
+          "slot_id": 5,
+          "cx": 1575.5,
+          "cy": 885.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 17.6
+        },
+        {
+          "track_id": 54,
+          "label": "054",
+          "slot_id": 1,
+          "cx": 1588.5,
+          "cy": 1026.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 242.3
+        },
+        {
+          "track_id": 55,
+          "label": "055",
+          "slot_id": 0,
+          "cx": 1414.5,
+          "cy": 1050.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 17.4
+        },
+        {
+          "track_id": 57,
+          "label": "057",
+          "slot_id": 2,
+          "cx": 1588.5,
+          "cy": 1173.5,
+          "stage": "storing",
+          "queue_pos": null,
+          "lid": "open",
+          "lid_score": 246.5
+        }
+      ],
+      "injection": [
+        {
+          "track_id": 2,
+          "label": "002",
+          "slot_id": null,
+          "cx": 1560.5,
+          "cy": 1518.5,
+          "stage": "injection",
+          "queue_pos": 0,
+          "lid": "open",
+          "lid_score": 578.4
+        },
+        {
+          "track_id": 11,
+          "label": "011",
+          "slot_id": null,
+          "cx": 1574.5,
+          "cy": 1935.5,
+          "stage": "injection",
+          "queue_pos": 1,
+          "lid": "lid",
+          "lid_score": 691.6
+        }
+      ],
+      "heating": [
+        {
+          "track_id": 6,
+          "label": "006",
+          "slot_id": 1,
+          "cx": 1816.5,
+          "cy": 2456.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 721.8
+        },
+        {
+          "track_id": 12,
+          "label": "012",
+          "slot_id": 0,
+          "cx": 2057.5,
+          "cy": 2444.5,
+          "stage": "heating",
+          "queue_pos": null,
+          "lid": "lid",
+          "lid_score": 900.7
+        }
+      ],
+      "collection": []
+    },
+    "handoffs": [
+      {
+        "track_id": 12,
+        "from": "collection",
+        "to": "heating"
+      }
+    ],
+    "closed": []
+  }
+]
